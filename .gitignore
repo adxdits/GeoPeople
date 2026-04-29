@@ -1,0 +1,14 @@
+.gradle/
+.idea/
+local.properties
+build/
+captures/
+
+*.iml
+
+# Android Studio and Gradle build outputs
+**/build/
+**/out/
+
+# OS files
+.DS_Store
