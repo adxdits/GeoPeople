@@ -1,14 +1,17 @@
-.gradle/
-.idea/
-local.properties
-build/
-captures/
-
 *.iml
-
-# Android Studio and Gradle build outputs
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
 **/build/
 **/out/
-
-# OS files
-.DS_Store
