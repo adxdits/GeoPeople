@@ -23,3 +23,4 @@ Thumbs.db
 # Signing keys - never commit these
 *.keystore
 *.jks
+.idea/
