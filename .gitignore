@@ -8,10 +8,18 @@
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
 .DS_Store
+**/.DS_Store
+Thumbs.db
 /build
 /captures
 .externalNativeBuild
 .cxx
-local.properties
 **/build/
 **/out/
+
+# Kotlin
+.kotlin/
+
+# Signing keys - never commit these
+*.keystore
+*.jks
