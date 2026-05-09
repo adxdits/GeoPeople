@@ -1,6 +1,7 @@
 *.iml
 .gradle
 /local.properties
+/frontend/local.properties
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
@@ -24,3 +25,6 @@ Thumbs.db
 *.keystore
 *.jks
 .idea/
+
+# Backend
+/backend/node_modules/
