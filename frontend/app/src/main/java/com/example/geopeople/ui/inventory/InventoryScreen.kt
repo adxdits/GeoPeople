@@ -10,6 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.geopeople.model.GeoCard
+import com.example.geopeople.ui.card.GeoCardDisplayer
+import com.example.geopeople.ui.notification.sendNotification
+
 
 @Composable
 fun InventoryScreen(inventory: List<GeoCard>) {
@@ -24,28 +27,18 @@ fun InventoryScreen(inventory: List<GeoCard>) {
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             Text(
                 "Inventaire (${inventory.size})",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
         items(inventory) { card ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(card.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(card.description, style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        "Puissance: ${card.power}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
+            GeoCardDisplayer(card = card)
         }
     }
 }

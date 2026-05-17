@@ -49,6 +49,7 @@ fun AppNavigation(viewModel: GameViewModel) {
     ) { padding ->
         NavHost(navController, startDestination = "map", Modifier.padding(padding)) {
             composable("map") { GameScreen(viewModel) }
+
             composable("inventory") {
                 val inventory by viewModel.inventory.collectAsState()
                 InventoryScreen(inventory)
