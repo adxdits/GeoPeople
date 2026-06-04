@@ -5,18 +5,28 @@ const router = Router();
 
 // POST /api/captures
 router.post("/", (req: Request, res: Response) => {
-  const { playerId, cardId, latitude, longitude } = req.body;
+  const { playerId, cardId, latitude, longitude, miniGameSuccess } = req.body;
 
-  if (!playerId || !cardId || typeof latitude !== "number" || typeof longitude !== "number") {
-    res.status(400).json({ error: "playerId, cardId, latitude, longitude requis" });
+  if (!playerId || !cardId || typeof latitude !== "number" ||typeof longitude !== "number" || typeof miniGameSuccess !== "boolean") {
+    res.status(400).json({
+      error: "playerId, cardId, latitude, longitude et miniGameSuccess sont requis"
+    });
     return;
   }
 
-  const result = captureCard(playerId, cardId, latitude, longitude);
+  const result = captureCard(
+    playerId,
+    cardId,
+    latitude,
+    longitude,
+    miniGameSuccess
+  );
+
   if (!result.success) {
-    res.status(400).json({ success: false, message: result.message });
+    res.status(400).json(result);
     return;
   }
+
   res.status(201).json(result);
 });
 

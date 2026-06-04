@@ -19,22 +19,38 @@ export function captureCard(
   playerId: string,
   cardId: string,
   playerLat: number,
-  playerLon: number
+  playerLon: number,
+  miniGameSuccess: boolean
 ): { success: boolean; message: string; capture?: Capture } {
+
   const card = getCardById(cardId);
   if (!card) {
     return { success: false, message: "Carte introuvable" };
   }
 
-  const distance = haversine(playerLat, playerLon, card.latitude, card.longitude);
-  if (distance > 50) {
-    return { success: false, message: `Trop loin (${Math.round(distance)}m, max 50m)` };
+  // mini jeu
+  if (!miniGameSuccess) {
+    return { success: false, message: "Mini-jeu non réussi" };
   }
 
-  const alreadyCaptured = captures.some(c => c.playerId === playerId && c.cardId === cardId);
-  if (alreadyCaptured) {
-    return { success: false, message: "Carte déjà capturée" };
+  // distance max 50m
+  const distance = haversine(playerLat,playerLon,card.latitude,card.longitude);
+  if (distance > 50) {
+    return {
+      success: false,
+      message: `Trop loin (${Math.round(distance)}m, max 50m)`
+    };
   }
+
+  // carte déjà prise par quelqu’un
+  if (card.capturedBy) {
+    return {
+      success: false,
+      message: "Carte déjà capturée par un joueur"
+    };
+  }
+
+  const captureDate = new Date().toISOString();
 
   const capture: Capture = {
     id: uuidv4(),
@@ -42,12 +58,30 @@ export function captureCard(
     cardId,
     latitude: playerLat,
     longitude: playerLon,
-    capturedAt: new Date().toISOString()
+    capturedAt: captureDate
   };
+
   captures.push(capture);
+
+  // mise à jour carte
+  card.capturedBy = playerId;
+  card.capturedAt = captureDate;
+
+  // historique
+  card.history.push({
+    playerId,
+    action: "capture",
+    date: captureDate
+  });
+
+  // ajout inventaire
   addCardToInventory(playerId, cardId);
 
-  return { success: true, message: "Carte capturée !", capture };
+  return {
+    success: true,
+    message: "Carte capturée !",
+    capture
+  };
 }
 
 export function getPlayerCaptures(playerId: string): Capture[] {

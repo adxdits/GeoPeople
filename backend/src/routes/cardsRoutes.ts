@@ -23,6 +23,16 @@ router.get("/nearby", (req: Request, res: Response) => {
   res.json(cards);
 });
 
+router.get("/:id/history", (req, res) => {
+  const card = getCardById(req.params.id);
+
+  if (!card) {
+    return res.status(404).json({ error: "Card not found" });
+  }
+
+  res.json(card.history);
+});
+
 // GET /api/cards/:id
 router.get("/:id", (req: Request, res: Response) => {
   const card = getCardById(req.params.id as string);

@@ -1,3 +1,9 @@
+export type CardHistory = {
+  playerId: string;
+  action: "capture" | "exchange" | "battle";
+  date: string;
+};
+
 export type Card = {
   id: string;
   personId: number;
@@ -11,4 +17,5 @@ export type Card = {
   power: number;
   capturedBy?: string;
   capturedAt?: string;
+  history: CardHistory[];
 };
