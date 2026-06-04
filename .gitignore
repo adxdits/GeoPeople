@@ -30,3 +30,16 @@ Thumbs.db
 /backend/node_modules/
 /backend/dist/
 /backend/.env
+
+# Large generated/data artifacts
+/backend/src/*.jsonl.zst
+
+# Mini-game/project imports
+**/.git/
+**/.gradle/
+**/build/
+**/captures/
+**/.cxx/
+**/.externalNativeBuild/
+frontend/app/src/main/java/com/example/geopeople/games/**/small_phone_*.png
+frontend/app/src/main/java/com/example/geopeople/games/**/medium_phone_*.png
