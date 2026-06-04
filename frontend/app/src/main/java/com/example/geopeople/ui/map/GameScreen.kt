@@ -32,7 +32,18 @@ import com.example.geopeople.model.GeoCard
 import com.example.geopeople.ui.capture.CaptureOverlay
 import com.example.geopeople.ui.capture.CaptureSuccessAnimation
 import com.example.geopeople.viewmodel.GameViewModel
+import com.example.mini_game.MainActivity as PokeballActivity
+import com.example.minijeu.MainActivity as BallrunActivity
+import com.example.tp4.MainActivity as MemoryActivity
 import tp4.uge.snake.SnakeActivity
+import kotlin.random.Random
+
+private val captureMiniGames = listOf(
+    SnakeActivity::class.java,
+    PokeballActivity::class.java,
+    BallrunActivity::class.java,
+    MemoryActivity::class.java
+)
 
 @Composable
 fun GameScreen(viewModel: GameViewModel) {
@@ -103,7 +114,8 @@ fun GameScreen(viewModel: GameViewModel) {
                 onCapture = {
                     pendingCaptureCard = card
                     viewModel.selectCard(null)
-                    miniGameLauncher.launch(Intent(context, SnakeActivity::class.java))
+                    val miniGameClass = captureMiniGames.random(Random(System.nanoTime()))
+                    miniGameLauncher.launch(Intent(context, miniGameClass))
                 },
                 onDismiss = { viewModel.selectCard(null) }
             )

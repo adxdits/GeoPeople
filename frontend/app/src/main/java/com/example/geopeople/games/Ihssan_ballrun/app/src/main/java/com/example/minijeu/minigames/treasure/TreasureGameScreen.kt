@@ -37,7 +37,9 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 @Composable
-fun TreasureGameScreen() {
+fun TreasureGameScreen(
+    onGameEnd: (isVictory: Boolean) -> Unit = {}
+) {
     val context = LocalContext.current
     val config = remember { TreasureGameConfig() }
     val stars = remember { treasureStars }
@@ -247,6 +249,20 @@ fun TreasureGameScreen() {
                 // The recorder may not have started if the emulator blocks the microphone.
             }
             recorder.release()
+        }
+    }
+
+    LaunchedEffect(phase) {
+        when (phase) {
+            GamePhase.Won -> {
+                delay(1200)
+                onGameEnd(true)
+            }
+            GamePhase.Lost -> {
+                delay(1200)
+                onGameEnd(false)
+            }
+            else -> Unit
         }
     }
 

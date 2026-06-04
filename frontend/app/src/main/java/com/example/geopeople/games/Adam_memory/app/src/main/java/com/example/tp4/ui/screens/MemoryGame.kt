@@ -21,7 +21,10 @@ enum class GameState {
 }
 
 @Composable
-fun MemoryGame(modifier: Modifier = Modifier) {
+fun MemoryGame(
+    modifier: Modifier = Modifier,
+    onGameComplete: () -> Unit = {}
+) {
     val context = LocalContext.current
     val allFishes = remember { Fish.loadFromAssets(context) }
     val viewModel: BoardViewModel = viewModel()
@@ -77,6 +80,7 @@ fun MemoryGame(modifier: Modifier = Modifier) {
                 attempts = endAttempts,
                 elapsedMs = endElapsed,
                 onRestart = { gameState = GameState.SETTINGS },
+                onValidateCapture = onGameComplete,
                 modifier = modifier
             )
         }

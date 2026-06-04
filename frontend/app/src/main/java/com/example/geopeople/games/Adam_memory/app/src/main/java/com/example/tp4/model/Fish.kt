@@ -11,7 +11,7 @@ data class Fish(
         fun loadFromAssets(context: Context): List<Fish> {
             val fishFiles = context.assets.list("fishes") ?: emptyArray()
             return fishFiles
-                .filter { it.endsWith(".png") || it.endsWith(".jpg") || it.endsWith(".webp") }
+                .filter { it.endsWith(".png") || it.endsWith(".jpg") || it.endsWith(".jpeg") || it.endsWith(".webp") }
                 .map { fileName ->
                     Fish(
                         name = fileName.substringBeforeLast("."),

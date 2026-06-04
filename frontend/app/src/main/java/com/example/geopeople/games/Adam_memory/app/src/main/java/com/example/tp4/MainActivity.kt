@@ -1,5 +1,6 @@
 package com.example.tp4
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,7 +19,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             Tp4Theme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    MemoryGame(modifier = Modifier.padding(innerPadding))
+                    MemoryGame(
+                        modifier = Modifier.padding(innerPadding),
+                        onGameComplete = {
+                            setResult(Activity.RESULT_OK)
+                            finish()
+                        }
+                    )
                 }
             }
         }

@@ -20,7 +20,7 @@ fun GoldroidDisplayer(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val bitmap = remember {
         try {
-            context.assets.open("goldroid.png").use { stream ->
+            context.assets.open("blobid0.jpg").use { stream ->
                 BitmapFactory.decodeStream(stream)
             }
         } catch (e: Exception) {

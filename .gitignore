@@ -25,6 +25,7 @@ Thumbs.db
 *.keystore
 *.jks
 .idea/
+.vscode/
 
 # Backend
 /backend/node_modules/

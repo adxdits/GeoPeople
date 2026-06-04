@@ -40,6 +40,12 @@ android {
     buildFeatures {
         compose = true
     }
+    sourceSets {
+        getByName("main") {
+            assets.srcDir("src/main/java/com/example/geopeople/games/Adam_pokeball/app/src/main/assets")
+            assets.srcDir("src/main/java/com/example/geopeople/games/Adam_memory/app/src/main/assets")
+        }
+    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -48,11 +54,21 @@ android {
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    exclude("**/games/*/app/**")
+    exclude("**/games/Adam_pokeball/app/src/test/**")
+    exclude("**/games/Adam_pokeball/app/src/androidTest/**")
+    exclude("**/games/Adam_memory/app/src/test/**")
+    exclude("**/games/Adam_memory/app/src/androidTest/**")
+    exclude("**/games/Ihssan_ballrun/app/src/test/**")
+    exclude("**/games/Ihssan_ballrun/app/src/androidTest/**")
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    exclude("**/games/*/app/**")
+    exclude("**/games/Adam_pokeball/app/src/test/**")
+    exclude("**/games/Adam_pokeball/app/src/androidTest/**")
+    exclude("**/games/Adam_memory/app/src/test/**")
+    exclude("**/games/Adam_memory/app/src/androidTest/**")
+    exclude("**/games/Ihssan_ballrun/app/src/test/**")
+    exclude("**/games/Ihssan_ballrun/app/src/androidTest/**")
 }
 
 dependencies {

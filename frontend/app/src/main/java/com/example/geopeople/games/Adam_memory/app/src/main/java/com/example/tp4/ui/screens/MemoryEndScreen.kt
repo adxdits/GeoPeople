@@ -20,6 +20,7 @@ fun MemoryEndScreen(
     attempts: Int,
     elapsedMs: Long,
     onRestart: () -> Unit,
+    onValidateCapture: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val totalSeconds = elapsedMs / 1000
@@ -53,6 +54,10 @@ fun MemoryEndScreen(
         Spacer(modifier = Modifier.height(48.dp))
         Button(onClick = onRestart) {
             Text("Rejouer")
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(onClick = onValidateCapture) {
+            Text("Valider la capture")
         }
     }
 }
