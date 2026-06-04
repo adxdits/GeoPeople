@@ -20,8 +20,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun SnakeGame(viewModel: SnakeViewModel) {
+fun SnakeGame(
+    viewModel: SnakeViewModel,
+    onFinished: (Boolean) -> Unit = {}
+) {
     val state by viewModel.state.collectAsState()
+
+    LaunchedEffect(state.isGameOver, state.isWin) {
+        if (state.isGameOver) {
+            kotlinx.coroutines.delay(900)
+            onFinished(state.isWin)
+        }
+    }
 
     Box(
         modifier = Modifier

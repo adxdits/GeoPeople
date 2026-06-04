@@ -47,6 +47,14 @@ android {
     }
 }
 
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    exclude("**/games/*/app/**")
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    exclude("**/games/*/app/**")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

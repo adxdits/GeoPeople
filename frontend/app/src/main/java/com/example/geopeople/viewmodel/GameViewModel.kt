@@ -29,6 +29,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _captureSuccess = MutableStateFlow(false)
     val captureSuccess: StateFlow<Boolean> = _captureSuccess.asStateFlow()
 
+    private val _captureMessage = MutableStateFlow<String?>(null)
+    val captureMessage: StateFlow<String?> = _captureMessage.asStateFlow()
+
     private val _playerScore = MutableStateFlow(0)
     val playerScore: StateFlow<Int> = _playerScore.asStateFlow()
 
@@ -109,27 +112,39 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _selectedCard.value = card
     }
 
-    fun captureSelected() {
-        val card = _selectedCard.value ?: return
+    fun captureAfterMiniGame(card: GeoCard) {
         val loc = playerLocation.value ?: return
         if (captureManager.canCapture(loc.latitude, loc.longitude, card)) {
-            captureManager.capture(card)
-            _captureSuccess.value = true
-            _selectedCard.value = null
-
-            // Sync capture to backend
             viewModelScope.launch {
-                playerId?.let { id ->
-                    val result = ApiService.captureCard(id, card.id, loc.latitude, loc.longitude)
-                    if (result.success) {
-                        val player = ApiService.getPlayer(id)
-                        if (player != null) {
-                            _playerScore.value = player.score
-                        }
+                val id = playerId
+                if (id == null) {
+                    _captureMessage.value = "Joueur non connecte au backend"
+                    return@launch
+                }
+
+                val result = ApiService.captureCard(id, card.id, loc.latitude, loc.longitude, miniGameSuccess = true)
+                if (result.success) {
+                    captureManager.capture(card)
+                    _captureSuccess.value = true
+                    _selectedCard.value = null
+
+                    val player = ApiService.getPlayer(id)
+                    if (player != null) {
+                        _playerScore.value = player.score
                     }
+                } else {
+                    _captureMessage.value = result.message.ifBlank { "Capture refusee par le backend" }
                 }
             }
         }
+    }
+
+    fun reportCaptureFailure(message: String) {
+        _captureMessage.value = message
+    }
+
+    fun dismissCaptureMessage() {
+        _captureMessage.value = null
     }
 
     fun dismissCaptureSuccess() {

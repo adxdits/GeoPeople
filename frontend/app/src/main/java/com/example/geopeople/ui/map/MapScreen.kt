@@ -30,6 +30,7 @@ fun MapScreen(
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             controller.setZoom(17.0)
+            controller.setCenter(GeoPoint(37.4219983, -122.084))
         }
     }
 

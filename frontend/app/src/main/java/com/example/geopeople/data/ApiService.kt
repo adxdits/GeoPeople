@@ -98,7 +98,8 @@ object ApiService {
         playerId: String,
         cardId: String,
         lat: Double,
-        lon: Double
+        lon: Double,
+        miniGameSuccess: Boolean
     ): CaptureResponse = withContext(Dispatchers.IO) {
         try {
             val body = JSONObject()
@@ -106,6 +107,7 @@ object ApiService {
                 .put("cardId", cardId)
                 .put("latitude", lat)
                 .put("longitude", lon)
+                .put("miniGameSuccess", miniGameSuccess)
                 .toString().toRequestBody(JSON_MEDIA)
             val request = Request.Builder()
                 .url("$BASE_URL/captures")
