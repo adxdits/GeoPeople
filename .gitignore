@@ -36,6 +36,7 @@ Thumbs.db
 
 # Mini-game/project imports
 **/.git/
+**/.git_disabled/
 **/.gradle/
 **/build/
 **/captures/
