@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -277,8 +278,30 @@ fun GameScreen(
         )
 
         HudOverlay(scoreState, timeState)
+        JumpFallbackButton(
+            enabled = resultState.value == GameResult.PLAYING,
+            onJump = { engine.consumeClap() }
+        )
         ClapHint(showClapHintState)
         ResultOverlays(resultState, winnerAlpha, scoreState)
+    }
+}
+
+@Composable
+private fun JumpFallbackButton(
+    enabled: Boolean,
+    onJump: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Button(
+            onClick = onJump,
+            enabled = enabled,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp)
+        ) {
+            Text("Jump")
+        }
     }
 }
 
