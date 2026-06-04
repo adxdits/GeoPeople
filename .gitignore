@@ -44,3 +44,6 @@ Thumbs.db
 **/.externalNativeBuild/
 frontend/app/src/main/java/com/example/geopeople/games/**/small_phone_*.png
 frontend/app/src/main/java/com/example/geopeople/games/**/medium_phone_*.png
+
+# Godot import metadata copied with asset packs
+*.import
