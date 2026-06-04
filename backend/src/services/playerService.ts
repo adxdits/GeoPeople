@@ -32,8 +32,10 @@ export function updatePlayerLocation(id: string, lat: number, lon: number ): Pla
   const minutes = (now - oldTime) / (1000 * 60);
   const distance = haversine( player.latitude, player.longitude, lat, lon );
 
-  // anti-triche
-  if (minutes < 30 && distance > 500) {
+  const hasPreviousLocation = player.latitude !== 0 || player.longitude !== 0;
+
+  // anti-triche: skip the very first real GPS fix after registration.
+  if (hasPreviousLocation && minutes < 30 && distance > 500) {
     throw new Error("Déplacement suspect détecté");
   }
 
