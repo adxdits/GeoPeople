@@ -127,15 +127,13 @@ function demoCellId(lat: number, lon: number): string {
   return `${lat.toFixed(3)}-${lon.toFixed(3)}`.replace(/[^0-9-]/g, "");
 }
 
-function ensureDemoCardsAround(lat: number, lon: number): void {
+function buildDemoCardsAround(lat: number, lon: number): Card[] {
   const cellId = demoCellId(lat, lon);
-  if (cards.some(card => card.id.startsWith(`demo-${cellId}-`))) return;
-
-  DEMO_PEOPLE.forEach((person, index) => {
+  return DEMO_PEOPLE.map((person, index) => {
     const offset = DEMO_OFFSETS_METERS[index];
     const position = offsetCoordinates(lat, lon, offset.north, offset.east);
 
-    cards.push({
+    return {
       id: `demo-${cellId}-${index + 1}`,
       personId: person.personId,
       personName: person.personName,
@@ -147,7 +145,24 @@ function ensureDemoCardsAround(lat: number, lon: number): void {
       zone: false,
       power: person.power,
       history: []
-    });
+    };
+  });
+}
+
+function ensureDemoCardsAround(lat: number, lon: number): void {
+  buildDemoCardsAround(lat, lon).forEach(demoCard => {
+    const existingIndex = cards.findIndex(card => card.id === demoCard.id);
+    if (existingIndex >= 0) {
+      cards[existingIndex] = {
+        ...cards[existingIndex],
+        ...demoCard,
+        capturedBy: cards[existingIndex].capturedBy,
+        capturedAt: cards[existingIndex].capturedAt,
+        history: cards[existingIndex].history
+      };
+    } else {
+      cards.push(demoCard);
+    }
   });
 }
 
@@ -162,8 +177,12 @@ export function getCardById(id: string): Card | undefined {
 export function getCardsNearby(lat: number, lon: number, radiusKm: number = 20): Card[] {
   ensureDemoCardsAround(lat, lon);
 
-  return cards.filter(card => {
-    const dist = haversine(lat, lon, card.latitude, card.longitude);
-    return dist <= radiusKm * 1000;
-  });
+  return cards
+    .map(card => ({
+      card,
+      distance: haversine(lat, lon, card.latitude, card.longitude)
+    }))
+    .filter(({ distance }) => distance <= radiusKm * 1000)
+    .sort((a, b) => a.distance - b.distance)
+    .map(({ card }) => card);
 }

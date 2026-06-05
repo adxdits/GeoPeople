@@ -2,6 +2,7 @@ package com.example.geopeople.ui.map
 
 import android.app.Activity
 import android.content.Intent
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -44,6 +45,8 @@ private val captureMiniGames = listOf(
     MemoryActivity::class.java
 )
 
+private const val TAG = "GeoPeopleScreen"
+
 @Composable
 fun GameScreen(viewModel: GameViewModel) {
     val context = LocalContext.current
@@ -74,6 +77,21 @@ fun GameScreen(viewModel: GameViewModel) {
         val loc = playerLocation ?: return@remember emptyList()
         cards.filter {
             DistanceUtils.haversine(loc.latitude, loc.longitude, it.latitude, it.longitude) <= 500.0
+        }
+    }
+
+    LaunchedEffect(playerLocation, cards, visibleCards) {
+        val loc = playerLocation
+        if (loc == null) {
+            Log.d(TAG, "Render state: no GPS, loadedCards=${cards.size}")
+        } else {
+            val closest = cards.minOfOrNull {
+                DistanceUtils.haversine(loc.latitude, loc.longitude, it.latitude, it.longitude)
+            }
+            Log.d(
+                TAG,
+                "Render state: lat=${loc.latitude} lon=${loc.longitude} loadedCards=${cards.size} visibleCards=${visibleCards.size} closest=${closest?.let { "${it.toInt()}m" } ?: "none"}"
+            )
         }
     }
 

@@ -1,5 +1,6 @@
 package com.example.geopeople.data
 
+import android.util.Log
 import com.example.geopeople.model.GeoCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -10,6 +11,8 @@ import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 object WikidataService {
+    private const val TAG = "GeoPeopleWikidata"
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
@@ -33,6 +36,7 @@ object WikidataService {
 
                 val url = "https://query.wikidata.org/sparql?query=" +
                         URLEncoder.encode(query, "UTF-8") + "&format=json"
+                Log.d(TAG, "Fetching Wikidata places lat=$lat lon=$lon radiusKm=$radiusKm")
                 val request = Request.Builder()
                     .url(url)
                     .header("User-Agent", "GeoPeople/1.0")
@@ -40,9 +44,15 @@ object WikidataService {
                     .build()
 
                 val response = client.newCall(request).execute()
-                val body = response.body?.string() ?: return@withContext emptyList()
-                parseResponse(body)
+                val body = response.body?.string() ?: run {
+                    Log.w(TAG, "Wikidata empty response body, status=${response.code}")
+                    return@withContext emptyList()
+                }
+                val cards = parseResponse(body)
+                Log.d(TAG, "Wikidata status=${response.code} count=${cards.size}")
+                cards
             } catch (e: Exception) {
+                Log.e(TAG, "Wikidata fetch failed lat=$lat lon=$lon radiusKm=$radiusKm", e)
                 e.printStackTrace()
                 emptyList()
             }

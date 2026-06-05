@@ -1,5 +1,6 @@
 package com.example.geopeople.data
 
+import android.util.Log
 import com.example.geopeople.model.GeoCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -12,8 +13,9 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 object ApiService {
+    private const val TAG = "GeoPeopleApi"
     // For emulator use 10.0.2.2, for real device use your machine's IP
-    private const val BASE_URL = "http://10.0.2.2:3000/api"
+    private const val BASE_URL = "http://127.0.0.1:3000/api"
     private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
 
     private val client = OkHttpClient.Builder()
@@ -31,10 +33,16 @@ object ApiService {
                 .url("$BASE_URL/players/register")
                 .post(body)
                 .build()
+            Log.d(TAG, "POST ${request.url}")
             val response = client.newCall(request).execute()
-            val json = response.body?.string() ?: return@withContext null
+            val json = response.body?.string() ?: run {
+                Log.w(TAG, "registerPlayer: empty response body, status=${response.code}")
+                return@withContext null
+            }
+            Log.d(TAG, "registerPlayer: status=${response.code}")
             parsePlayerResponse(JSONObject(json))
         } catch (e: Exception) {
+            Log.e(TAG, "registerPlayer failed", e)
             e.printStackTrace()
             null
         }
@@ -46,10 +54,16 @@ object ApiService {
                 .url("$BASE_URL/players/$playerId")
                 .get()
                 .build()
+            Log.d(TAG, "GET ${request.url}")
             val response = client.newCall(request).execute()
-            val json = response.body?.string() ?: return@withContext null
+            val json = response.body?.string() ?: run {
+                Log.w(TAG, "getPlayer: empty response body, status=${response.code}")
+                return@withContext null
+            }
+            Log.d(TAG, "getPlayer: status=${response.code}")
             parsePlayerResponse(JSONObject(json))
         } catch (e: Exception) {
+            Log.e(TAG, "getPlayer failed for playerId=$playerId", e)
             e.printStackTrace()
             null
         }
@@ -66,9 +80,12 @@ object ApiService {
                     .url("$BASE_URL/players/$playerId/location")
                     .put(body)
                     .build()
+                Log.d(TAG, "PUT ${request.url} lat=$lat lon=$lon")
                 val response = client.newCall(request).execute()
+                Log.d(TAG, "updatePlayerLocation: status=${response.code} success=${response.isSuccessful}")
                 response.isSuccessful
             } catch (e: Exception) {
+                Log.e(TAG, "updatePlayerLocation failed for playerId=$playerId", e)
                 e.printStackTrace()
                 false
             }
@@ -83,10 +100,17 @@ object ApiService {
                     .url("$BASE_URL/cards/nearby?lat=$lat&lon=$lon&radius=$radiusKm")
                     .get()
                     .build()
+                Log.d(TAG, "GET ${request.url}")
                 val response = client.newCall(request).execute()
-                val json = response.body?.string() ?: return@withContext emptyList()
-                parseCardsArray(JSONArray(json))
+                val json = response.body?.string() ?: run {
+                    Log.w(TAG, "getNearbyCards: empty response body, status=${response.code}")
+                    return@withContext emptyList()
+                }
+                val cards = parseCardsArray(JSONArray(json))
+                Log.d(TAG, "getNearbyCards: status=${response.code} count=${cards.size}")
+                cards
             } catch (e: Exception) {
+                Log.e(TAG, "getNearbyCards failed lat=$lat lon=$lon radiusKm=$radiusKm", e)
                 e.printStackTrace()
                 emptyList()
             }
