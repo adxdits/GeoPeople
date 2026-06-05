@@ -44,6 +44,7 @@ android {
         getByName("main") {
             assets.srcDir("src/main/java/com/example/geopeople/games/Adam_pokeball/app/src/main/assets")
             assets.srcDir("src/main/java/com/example/geopeople/games/Adam_memory/app/src/main/assets")
+            assets.srcDir("src/main/java/com/example/geopeople/assetspackage")
         }
     }
     packaging {

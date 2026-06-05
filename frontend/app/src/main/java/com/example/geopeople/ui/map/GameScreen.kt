@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -95,12 +94,6 @@ fun GameScreen(viewModel: GameViewModel) {
                 .padding(14.dp)
         )
 
-        PixelAssetStrip(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 12.dp, bottom = 18.dp)
-        )
-
         selectedCard?.let { card ->
             val distance = playerLocation?.let { loc ->
                 DistanceUtils.haversine(loc.latitude, loc.longitude, card.latitude, card.longitude)
@@ -135,40 +128,6 @@ fun GameScreen(viewModel: GameViewModel) {
                 },
                 title = { androidx.compose.material3.Text("Capture") },
                 text = { androidx.compose.material3.Text(message) }
-            )
-        }
-    }
-}
-
-@Composable
-private fun PixelAssetStrip(modifier: Modifier = Modifier) {
-    androidx.compose.foundation.layout.Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.house1),
-            contentDescription = null,
-            modifier = Modifier.size(72.dp)
-        )
-        Image(
-            painter = painterResource(id = R.drawable.tree1),
-            contentDescription = null,
-            modifier = Modifier.size(64.dp)
-        )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(
-                painter = painterResource(id = R.drawable.male_spritesheet),
-                contentDescription = null,
-                modifier = Modifier.size(48.dp)
-            )
-            Image(
-                painter = painterResource(id = R.drawable.tall_grass),
-                contentDescription = null,
-                modifier = Modifier
-                    .width(84.dp)
-                    .size(38.dp)
             )
         }
     }
