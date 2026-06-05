@@ -36,6 +36,9 @@ import com.example.mini_game.MainActivity as PokeballActivity
 import com.example.minijeu.MainActivity as BallrunActivity
 import com.example.tp4.MainActivity as MemoryActivity
 import tp4.uge.snake.SnakeActivity
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.random.Random
 
 private val captureMiniGames = listOf(
@@ -57,6 +60,7 @@ fun GameScreen(viewModel: GameViewModel) {
     val captureMessage by viewModel.captureMessage.collectAsState()
     val inventory by viewModel.inventory.collectAsState()
     var pendingCaptureCard by remember { mutableStateOf<GeoCard?>(null) }
+    var previousDistanceByCard by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
     val miniGameLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -116,10 +120,32 @@ fun GameScreen(viewModel: GameViewModel) {
             val distance = playerLocation?.let { loc ->
                 DistanceUtils.haversine(loc.latitude, loc.longitude, card.latitude, card.longitude)
             } ?: Double.MAX_VALUE
+            val previousDistance = previousDistanceByCard[card.id]
+            val approachState = remember(card.id, distance, previousDistance) {
+                when {
+                    previousDistance == null -> ApproachState.Unknown
+                    distance < previousDistance - 2.0 -> ApproachState.Closer
+                    distance > previousDistance + 2.0 -> ApproachState.Farther
+                    else -> ApproachState.Stable
+                }
+            }
+            val bearing = playerLocation?.let { loc ->
+                bearingDegrees(loc.latitude, loc.longitude, card.latitude, card.longitude)
+            }
+
+            LaunchedEffect(card.id, distance) {
+                if (distance.isFinite()) {
+                    previousDistanceByCard = previousDistanceByCard + (card.id to distance)
+                }
+            }
 
             CaptureOverlay(
                 card = card,
                 distance = distance,
+                bearingDegrees = bearing,
+                directionLabel = bearing?.let(::compassLabel) ?: "GPS",
+                approachMessage = approachState.message,
+                approachSignal = approachState.signal,
                 canCapture = distance <= 50.0 && !capturedIds.contains(card.id),
                 alreadyCaptured = capturedIds.contains(card.id),
                 onCapture = {
@@ -149,6 +175,28 @@ fun GameScreen(viewModel: GameViewModel) {
             )
         }
     }
+}
+
+private enum class ApproachState(val message: String, val signal: Int) {
+    Unknown("Deplace-toi pour activer l'aide de capture.", 0),
+    Closer("Tu te rapproches de la carte.", 1),
+    Farther("Tu t'eloignes de la carte.", -1),
+    Stable("Distance stable.", 0)
+}
+
+private fun bearingDegrees(fromLat: Double, fromLon: Double, toLat: Double, toLon: Double): Double {
+    val lat1 = Math.toRadians(fromLat)
+    val lat2 = Math.toRadians(toLat)
+    val deltaLon = Math.toRadians(toLon - fromLon)
+    val y = sin(deltaLon) * cos(lat2)
+    val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(deltaLon)
+    return (Math.toDegrees(atan2(y, x)) + 360.0) % 360.0
+}
+
+private fun compassLabel(degrees: Double): String {
+    val directions = listOf("N", "NE", "E", "SE", "S", "SO", "O", "NO")
+    val index = (((degrees + 22.5) % 360.0) / 45.0).toInt()
+    return directions[index]
 }
 
 @Composable
