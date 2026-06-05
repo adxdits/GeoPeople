@@ -40,30 +40,43 @@ import com.example.geopeople.ui.inventory.CardDetailScreen
 import com.example.geopeople.ui.inventory.InventoryScreen
 import com.example.geopeople.ui.map.GameScreen
 import com.example.geopeople.viewmodel.GameViewModel
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
 
 @Composable
 fun AppNavigation(viewModel: GameViewModel) {
+    val context = LocalContext.current
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = currentRoute == "map" || currentRoute == "inventory"
+    val showBottomBar = currentRoute == "main"
+    var selectedTab by remember { mutableStateOf(MainTab.Map) }
     var selectedDetailCard by remember { mutableStateOf<GeoCard?>(null) }
+    val mapView = remember {
+        Configuration.getInstance().userAgentValue = context.packageName
+        MapView(context).apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            setMultiTouchControls(true)
+            controller.setZoom(17.0)
+            controller.setCenter(GeoPoint(37.4219983, -122.084))
+        }
+    }
+
+    DisposableEffect(mapView) {
+        onDispose {
+            mapView.onDetach()
+        }
+    }
 
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
                 BottomTextNavigation(
-                    currentRoute = currentRoute,
-                    onMapClick = {
-                        navController.navigate("map") {
-                            popUpTo("map") { inclusive = true }
-                        }
-                    },
-                    onInventoryClick = {
-                        navController.navigate("inventory") {
-                            popUpTo("map")
-                        }
-                    }
+                    selectedTab = selectedTab,
+                    onMapClick = { selectedTab = MainTab.Map },
+                    onInventoryClick = { selectedTab = MainTab.Inventory }
                 )
             }
         }
@@ -72,17 +85,17 @@ fun AppNavigation(viewModel: GameViewModel) {
             composable("start") {
                 StartScreen(
                     onStartClick = {
-                        navController.navigate("map") {
+                        navController.navigate("main") {
                             popUpTo("start") { inclusive = true }
                         }
                     }
                 )
             }
-            composable("map") { GameScreen(viewModel) }
-            composable("inventory") {
-                val inventory by viewModel.inventory.collectAsState()
-                InventoryScreen(
-                    inventory = inventory,
+            composable("main") {
+                MainTabsScreen(
+                    viewModel = viewModel,
+                    mapView = mapView,
+                    selectedTab = selectedTab,
                     onCardClick = { card ->
                         selectedDetailCard = card
                         navController.navigate("cardDetail")
@@ -104,9 +117,43 @@ fun AppNavigation(viewModel: GameViewModel) {
     }
 }
 
+private enum class MainTab {
+    Map,
+    Inventory
+}
+
+@Composable
+private fun MainTabsScreen(
+    viewModel: GameViewModel,
+    mapView: MapView,
+    selectedTab: MainTab,
+    onCardClick: (GeoCard) -> Unit
+) {
+    val inventory by viewModel.inventory.collectAsState()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        GameScreen(
+            viewModel = viewModel,
+            mapView = mapView
+        )
+
+        if (selectedTab == MainTab.Inventory) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                InventoryScreen(
+                    inventory = inventory,
+                    onCardClick = onCardClick
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun BottomTextNavigation(
-    currentRoute: String?,
+    selectedTab: MainTab,
     onMapClick: () -> Unit,
     onInventoryClick: () -> Unit
 ) {
@@ -124,13 +171,13 @@ private fun BottomTextNavigation(
         ) {
             NavigationTab(
                 label = "Carte",
-                selected = currentRoute == "map",
+                selected = selectedTab == MainTab.Map,
                 onClick = onMapClick,
                 modifier = Modifier.weight(1f)
             )
             NavigationTab(
                 label = "Inventaire",
-                selected = currentRoute == "inventory",
+                selected = selectedTab == MainTab.Inventory,
                 onClick = onInventoryClick,
                 modifier = Modifier.weight(1f)
             )

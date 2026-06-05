@@ -36,6 +36,7 @@ import com.example.geopeople.viewmodel.GameViewModel
 import com.example.mini_game.MainActivity as PokeballActivity
 import com.example.minijeu.MainActivity as BallrunActivity
 import com.example.tp4.MainActivity as MemoryActivity
+import org.osmdroid.views.MapView
 import tp4.uge.snake.SnakeActivity
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -52,7 +53,10 @@ private val captureMiniGames = listOf(
 private const val TAG = "GeoPeopleScreen"
 
 @Composable
-fun GameScreen(viewModel: GameViewModel) {
+fun GameScreen(
+    viewModel: GameViewModel,
+    mapView: MapView
+) {
     val context = LocalContext.current
     val playerLocation by viewModel.playerLocation.collectAsState()
     val cards by viewModel.allCards.collectAsState()
@@ -102,6 +106,7 @@ fun GameScreen(viewModel: GameViewModel) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         MapScreen(
+            mapView = mapView,
             playerLocation = playerLocation,
             visibleCards = visibleCards,
             capturedIds = capturedIds,

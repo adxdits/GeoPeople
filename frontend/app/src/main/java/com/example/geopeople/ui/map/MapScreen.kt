@@ -1,5 +1,8 @@
 package com.example.geopeople.ui.map
 
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.drawable.Drawable
 import android.location.Location
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -8,14 +11,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.geopeople.model.GeoCard
-import org.osmdroid.config.Configuration
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
 @Composable
 fun MapScreen(
+    mapView: MapView,
     playerLocation: Location?,
     visibleCards: List<GeoCard>,
     capturedIds: Set<String>,
@@ -23,16 +25,6 @@ fun MapScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-
-    val mapView = remember {
-        Configuration.getInstance().userAgentValue = context.packageName
-        MapView(context).apply {
-            setTileSource(TileSourceFactory.MAPNIK)
-            setMultiTouchControls(true)
-            controller.setZoom(17.0)
-            controller.setCenter(GeoPoint(37.4219983, -122.084))
-        }
-    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -45,7 +37,6 @@ fun MapScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            mapView.onDetach()
         }
     }
 
@@ -67,11 +58,13 @@ fun MapScreen(
             }
 
             visibleCards.forEach { card ->
+                val isCaptured = capturedIds.contains(card.id)
                 val marker = Marker(map).apply {
                     position = GeoPoint(card.latitude, card.longitude)
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                     title = card.name
-                    snippet = if (capturedIds.contains(card.id)) "Déjà capturée" else "Puissance: ${card.power}"
+                    snippet = if (isCaptured) "Déjà capturée" else "Puissance: ${card.power}"
+                    icon = markerIconCopy(icon, isCaptured)
                     setOnMarkerClickListener { _, _ ->
                         onCardClick(card)
                         true
@@ -83,4 +76,18 @@ fun MapScreen(
             map.invalidate()
         }
     )
+}
+
+private fun markerIconCopy(source: Drawable?, captured: Boolean): Drawable? {
+    val copy = source?.constantState?.newDrawable()?.mutate() ?: source?.mutate()
+    if (captured) {
+        copy?.colorFilter = ColorMatrixColorFilter(ColorMatrix().apply {
+            setSaturation(0f)
+        })
+        copy?.alpha = 170
+    } else {
+        copy?.clearColorFilter()
+        copy?.alpha = 255
+    }
+    return copy
 }
