@@ -35,6 +35,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.geopeople.model.GeoCard
+import com.example.geopeople.ui.inventory.CardDetailScreen
 import com.example.geopeople.ui.inventory.InventoryScreen
 import com.example.geopeople.ui.map.GameScreen
 import com.example.geopeople.viewmodel.GameViewModel
@@ -45,6 +47,7 @@ fun AppNavigation(viewModel: GameViewModel) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = currentRoute == "map" || currentRoute == "inventory"
+    var selectedDetailCard by remember { mutableStateOf<GeoCard?>(null) }
 
     Scaffold(
         bottomBar = {
@@ -78,7 +81,24 @@ fun AppNavigation(viewModel: GameViewModel) {
             composable("map") { GameScreen(viewModel) }
             composable("inventory") {
                 val inventory by viewModel.inventory.collectAsState()
-                InventoryScreen(inventory)
+                InventoryScreen(
+                    inventory = inventory,
+                    onCardClick = { card ->
+                        selectedDetailCard = card
+                        navController.navigate("cardDetail")
+                    }
+                )
+            }
+            composable("cardDetail") {
+                val card = selectedDetailCard
+                if (card == null) {
+                    LaunchedEffect(Unit) { navController.popBackStack() }
+                } else {
+                    CardDetailScreen(
+                        card = card,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }

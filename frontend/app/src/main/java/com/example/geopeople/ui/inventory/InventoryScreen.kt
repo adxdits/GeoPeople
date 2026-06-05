@@ -1,5 +1,6 @@
 package com.example.geopeople.ui.inventory
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,7 +13,10 @@ import androidx.compose.ui.unit.dp
 import com.example.geopeople.model.GeoCard
 
 @Composable
-fun InventoryScreen(inventory: List<GeoCard>) {
+fun InventoryScreen(
+    inventory: List<GeoCard>,
+    onCardClick: (GeoCard) -> Unit = {}
+) {
     if (inventory.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Aucune carte capturée", style = MaterialTheme.typography.bodyLarge)
@@ -35,7 +39,11 @@ fun InventoryScreen(inventory: List<GeoCard>) {
             Spacer(modifier = Modifier.height(8.dp))
         }
         items(inventory) { card ->
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onCardClick(card) }
+            ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(card.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(card.description, style = MaterialTheme.typography.bodySmall)
