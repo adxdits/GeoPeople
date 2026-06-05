@@ -30,16 +30,20 @@ class CardRepository {
 
     private fun buildLocalDemoCards(lat: Double, lon: Double): List<GeoCard> {
         val people = listOf(
-            "Alan Turing" to "Carte locale de secours",
-            "Simone Veil" to "Carte locale de secours",
-            "Leonard de Vinci" to "Carte locale de secours",
-            "Frida Kahlo" to "Carte locale de secours",
+            "Victor Hugo" to "Collection locale test",
+            "Valentin Hauy" to "Collection locale test",
+            "Vera Rubin" to "Collection locale test",
+            "Voltaire" to "Collection locale test",
+            "Alan Turing" to "Enigme locale",
+            "Ada Lovelace" to "Enigme locale",
         )
         val offsets = listOf(
-            80.0 to 20.0,
-            -90.0 to 70.0,
-            140.0 to -110.0,
-            -160.0 to -60.0,
+            8.0 to 0.0,
+            -12.0 to 8.0,
+            18.0 to -10.0,
+            -65.0 to -10.0,
+            85.0 to 20.0,
+            -110.0 to 35.0,
         )
         val metersPerDegreeLat = 111_320.0
         val metersPerDegreeLon = 111_320.0 * kotlin.math.cos(Math.toRadians(lat))

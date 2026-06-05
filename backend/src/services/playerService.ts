@@ -1,6 +1,7 @@
 import { Player } from "../models/player";
 import { v4 as uuidv4 } from "uuid";
 import { getCardById } from "./cardsService";
+import { calculateInventoryScore } from "./scoringService";
 
 const players: Map<string, Player> = new Map();
 
@@ -53,7 +54,7 @@ export function addCardToInventory(playerId: string, cardId: string ): Player | 
     const card = getCardById(cardId);
     if (!card) return undefined;
     player.inventory.push(cardId);
-    player.score += card.power;
+    player.score = calculateInventoryScore(player.inventory);
   }
   return player;
 }
@@ -73,6 +74,10 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
 }
 
 export function getLeaderboard(): Player[] {
+  for (const player of players.values()) {
+    player.score = calculateInventoryScore(player.inventory);
+  }
+
   return Array.from(players.values())
     .sort((a, b) => b.score - a.score);
 }

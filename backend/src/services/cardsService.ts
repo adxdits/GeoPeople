@@ -1,25 +1,25 @@
 ﻿import { Card } from "../models/card";
 
 const DEMO_PEOPLE = [
-  { personId: 2001, personName: "Alan Turing", relationName: "enigme de capture", power: 45 },
-  { personId: 2002, personName: "Simone Veil", relationName: "memoire historique", power: 60 },
-  { personId: 2003, personName: "Leonard de Vinci", relationName: "atelier secret", power: 80 },
-  { personId: 2004, personName: "Frida Kahlo", relationName: "trace artistique", power: 55 },
-  { personId: 2005, personName: "Nelson Mandela", relationName: "lieu symbolique", power: 75 },
-  { personId: 2006, personName: "Hypatie", relationName: "savoir ancien", power: 65 },
-  { personId: 2007, personName: "Nikola Tesla", relationName: "signal electrique", power: 70 },
-  { personId: 2008, personName: "Wangari Maathai", relationName: "racine verte", power: 50 }
+  { personId: 2001, personName: "Victor Hugo", relationName: "collection test", power: 40 },
+  { personId: 2002, personName: "Valentin Hauy", relationName: "collection test", power: 45 },
+  { personId: 2003, personName: "Vera Rubin", relationName: "collection test", power: 50 },
+  { personId: 2004, personName: "Voltaire", relationName: "collection test", power: 55 },
+  { personId: 2005, personName: "Alan Turing", relationName: "enigme de capture", power: 35 },
+  { personId: 2006, personName: "Ada Lovelace", relationName: "enigme de capture", power: 35 },
+  { personId: 2007, personName: "Simone Veil", relationName: "memoire historique", power: 60 },
+  { personId: 2008, personName: "Sophie Germain", relationName: "memoire historique", power: 65 }
 ];
 
 const DEMO_OFFSETS_METERS = [
-  { north: 80, east: 20 },
-  { north: -90, east: 70 },
-  { north: 140, east: -110 },
-  { north: -160, east: -60 },
-  { north: 230, east: 130 },
-  { north: -260, east: 180 },
-  { north: 360, east: -180 },
-  { north: -420, east: -220 }
+  { north: 8, east: 0 },
+  { north: -12, east: 8 },
+  { north: 18, east: -10 },
+  { north: -65, east: -10 },
+  { north: 85, east: 20 },
+  { north: -110, east: 35 },
+  { north: 145, east: -45 },
+  { north: -180, east: 20 }
 ];
 
 const cards: Card[] = [

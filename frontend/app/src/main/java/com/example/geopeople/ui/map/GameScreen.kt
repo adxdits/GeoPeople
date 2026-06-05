@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.geopeople.R
 import androidx.compose.ui.platform.LocalContext
+import com.example.geopeople.data.CaptureManager
 import com.example.geopeople.location.DistanceUtils
 import com.example.geopeople.model.GeoCard
 import com.example.geopeople.ui.capture.CaptureOverlay
@@ -146,7 +147,7 @@ fun GameScreen(viewModel: GameViewModel) {
                 directionLabel = bearing?.let(::compassLabel) ?: "GPS",
                 approachMessage = approachState.message,
                 approachSignal = approachState.signal,
-                canCapture = distance <= 50.0 && !capturedIds.contains(card.id),
+                canCapture = distance <= CaptureManager.CAPTURE_RANGE && !capturedIds.contains(card.id),
                 alreadyCaptured = capturedIds.contains(card.id),
                 onCapture = {
                     pendingCaptureCard = card

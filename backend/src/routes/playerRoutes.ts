@@ -89,9 +89,9 @@ router.get("/:id/collections", (req: Request, res: Response) => {
     res.status(404).json({ error: "Joueur introuvable" });
     return;
   }
-  const collections = getPlayerCollections(req.params.id as string);
+  const collectionSummary = getPlayerCollections(req.params.id as string);
 
-  res.json({ playerId: player.id, collections });
+  res.json({ playerId: player.id, ...collectionSummary });
 });
 
 export default router;
