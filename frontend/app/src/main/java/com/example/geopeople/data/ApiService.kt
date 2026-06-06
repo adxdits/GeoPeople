@@ -210,14 +210,18 @@ object ApiService {
         val cards = mutableListOf<GeoCard>()
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
+            val relationName = obj.optString("relationName", "")
+            val placeName = obj.optString("placeName", "")
             cards.add(
                 GeoCard(
                     id = obj.getString("id"),
                     name = obj.optString("personName", "Inconnu"),
-                    description = "${obj.optString("relationName", "")} - ${obj.optString("placeName", "")}",
+                    description = "$relationName - $placeName",
                     latitude = obj.getDouble("latitude"),
                     longitude = obj.getDouble("longitude"),
-                    power = obj.optInt("power", 1)
+                    power = obj.optInt("power", 1),
+                    relationName = relationName,
+                    placeName = placeName
                 )
             )
         }
