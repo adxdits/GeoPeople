@@ -275,7 +275,9 @@ object ApiService {
                     longitude = obj.getDouble("longitude"),
                     power = obj.optInt("power", 1),
                     relationName = relationName,
-                    placeName = placeName
+                    placeName = placeName,
+                    capturedBy = obj.optString("capturedBy", "").takeIf { it.isNotBlank() },
+                    capturedAt = obj.optString("capturedAt", "").takeIf { it.isNotBlank() }
                 )
             )
         }

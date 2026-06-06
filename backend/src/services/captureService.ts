@@ -28,6 +28,14 @@ export function captureCard(
     return { success: false, message: "Carte introuvable" };
   }
 
+  // deja capturee par n'importe quel joueur
+  if (card.capturedBy) {
+    return {
+      success: false,
+      message: "Carte deja capturee par un autre joueur"
+    };
+  }
+
   // mini jeu
   if (!miniGameSuccess) {
     return { success: false, message: "Mini-jeu non réussi" };

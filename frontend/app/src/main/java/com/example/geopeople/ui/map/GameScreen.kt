@@ -81,7 +81,9 @@ fun GameScreen(
         }
     }
 
-    val capturedIds = remember(inventory) { inventory.map { it.id }.toSet() }
+    val capturedIds = remember(inventory, cards) {
+        inventory.map { it.id }.toSet() + cards.filter { it.capturedBy != null }.map { it.id }
+    }
 
     val visibleCards = remember(playerLocation, cards) {
         val loc = playerLocation ?: return@remember emptyList()

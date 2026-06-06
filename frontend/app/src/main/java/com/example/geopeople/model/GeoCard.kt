@@ -9,5 +9,7 @@ data class GeoCard(
     val imageUrl: String? = null,
     val power: Int = (1..10).random(),
     val relationName: String? = null,
-    val placeName: String? = null
+    val placeName: String? = null,
+    val capturedBy: String? = null,
+    val capturedAt: String? = null
 )
