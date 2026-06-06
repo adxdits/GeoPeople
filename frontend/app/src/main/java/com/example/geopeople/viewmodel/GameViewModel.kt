@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.geopeople.data.ApiService
 import com.example.geopeople.data.CardRepository
 import com.example.geopeople.data.CaptureManager
+import com.example.geopeople.data.LeaderboardPlayerResponse
 import com.example.geopeople.location.DistanceUtils
 import com.example.geopeople.location.LocationService
 import com.example.geopeople.model.GeoCard
@@ -43,6 +44,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _playerScore = MutableStateFlow(0)
     val playerScore: StateFlow<Int> = _playerScore.asStateFlow()
 
+    private val _playerName = MutableStateFlow("Joueur")
+    val playerName: StateFlow<String> = _playerName.asStateFlow()
+
+    private val _currentPlayerId = MutableStateFlow<String?>(null)
+    val currentPlayerId: StateFlow<String?> = _currentPlayerId.asStateFlow()
+
+    private val _needsPlayerName = MutableStateFlow(false)
+    val needsPlayerName: StateFlow<Boolean> = _needsPlayerName.asStateFlow()
+
+    private val _leaderboard = MutableStateFlow<List<LeaderboardPlayerResponse>>(emptyList())
+    val leaderboard: StateFlow<List<LeaderboardPlayerResponse>> = _leaderboard.asStateFlow()
+
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
@@ -58,37 +71,30 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     init {
         // Restore player ID from prefs
         playerId = prefs.getString("playerId", null)
+        _currentPlayerId.value = playerId
+        _needsPlayerName.value = playerId == null
 
         // Register or restore player session
         viewModelScope.launch {
             if (playerId == null) {
-                Log.d(TAG, "No stored playerId, registering a new player")
-                val player = ApiService.registerPlayer("Joueur_${System.currentTimeMillis() % 10000}")
-                if (player != null) {
-                    playerId = player.id
-                    prefs.edit().putString("playerId", player.id).apply()
-                    _isConnected.value = true
-                    _playerScore.value = player.score
-                    Log.d(TAG, "Registered player id=${player.id} score=${player.score}")
-                } else {
-                    Log.w(TAG, "Player registration failed")
-                    _isConnected.value = false
-                    if (!serverConnectionPopupDismissed) {
-                        _serverConnectionMessage.value = "Connexion au serveur impossible."
-                    }
-                }
+                Log.d(TAG, "No stored playerId, waiting for player name")
+                _needsPlayerName.value = true
             } else {
                 Log.d(TAG, "Restoring playerId=$playerId")
                 val player = ApiService.getPlayer(playerId!!)
                 if (player != null) {
                     _isConnected.value = true
+                    _playerName.value = player.name
                     _playerScore.value = player.score
+                    restoreInventoryFromServer(player.id)
                     Log.d(TAG, "Restored player id=${player.id} score=${player.score}")
+                    refreshLeaderboard()
                 } else {
                     Log.w(TAG, "Could not restore playerId=$playerId")
                     _isConnected.value = false
+                    _needsPlayerName.value = true
                     if (!serverConnectionPopupDismissed) {
-                        _serverConnectionMessage.value = "Connexion au serveur impossible."
+                        _serverConnectionMessage.value = "Impossible de retrouver ce joueur sur le serveur. Entre ton nom pour continuer."
                     }
                 }
             }
@@ -217,7 +223,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                     val player = ApiService.getPlayer(id)
                     if (player != null) {
+                        _playerName.value = player.name
                         _playerScore.value = player.score
+                        refreshLeaderboard()
                     }
                 } else {
                     _captureMessage.value = result.message.ifBlank { "Capture refusee par le backend" }
@@ -241,6 +249,63 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissCaptureSuccess() {
         _captureSuccess.value = false
+    }
+
+    fun refreshLeaderboard() {
+        viewModelScope.launch {
+            _leaderboard.value = ApiService.getLeaderboard()
+        }
+    }
+
+    fun createNewPlayer(name: String) {
+        val cleanName = name.trim().ifBlank { "Joueur_${System.currentTimeMillis() % 10000}" }
+        viewModelScope.launch {
+            val player = ApiService.registerPlayer(cleanName)
+            if (player == null) {
+                _serverConnectionMessage.value = "Impossible de creer un nouveau joueur."
+                return@launch
+            }
+
+            playerId = player.id
+            _currentPlayerId.value = player.id
+            prefs.edit().putString("playerId", player.id).apply()
+            captureManager.clear()
+            _selectedCard.value = null
+            _captureSuccess.value = false
+            _captureMessage.value = null
+            _playerName.value = player.name
+            _playerScore.value = player.score
+            _isConnected.value = true
+            _needsPlayerName.value = false
+            restoreInventoryFromServer(player.id)
+            refreshLeaderboard()
+        }
+    }
+
+    private suspend fun restoreInventoryFromServer(id: String) {
+        val cards = ApiService.getPlayerInventoryCards(id)
+        captureManager.replaceInventory(cards)
+        Log.d(TAG, "Restored inventory from server playerId=$id count=${cards.size}")
+    }
+
+    fun logoutPlayer() {
+        playerId = null
+        prefs.edit().remove("playerId").apply()
+        _currentPlayerId.value = null
+        _playerName.value = "Joueur"
+        _playerScore.value = 0
+        _isConnected.value = false
+        _needsPlayerName.value = true
+        _selectedCard.value = null
+        _captureSuccess.value = false
+        _captureMessage.value = null
+        _serverConnectionMessage.value = null
+        serverConnectionPopupDismissed = false
+        lastFetchLat = null
+        lastFetchLon = null
+        lastSyncLat = null
+        lastSyncLon = null
+        captureManager.clear()
     }
 
     override fun onCleared() {

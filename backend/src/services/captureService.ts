@@ -1,6 +1,6 @@
 import { Capture } from "../models/capture";
 import { v4 as uuidv4 } from "uuid";
-import { addCardToInventory } from "./playerService";
+import { addCardToInventory, getPlayerInventory } from "./playerService";
 import { getCardById } from "./cardsService";
 
 const captures: Capture[] = [];
@@ -42,11 +42,11 @@ export function captureCard(
     };
   }
 
-  // carte déjà prise par quelqu’un
-  if (card.capturedBy) {
+  // deja dans l'inventaire de ce joueur
+  if (getPlayerInventory(playerId).includes(cardId)) {
     return {
       success: false,
-      message: "Carte déjà capturée par un joueur"
+      message: "Carte deja presente dans votre inventaire"
     };
   }
 

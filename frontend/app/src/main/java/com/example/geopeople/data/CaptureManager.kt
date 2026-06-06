@@ -27,5 +27,16 @@ class CaptureManager {
         return true
     }
 
+    fun replaceInventory(cards: List<GeoCard>) {
+        capturedIds.clear()
+        capturedIds.addAll(cards.map { it.id })
+        _inventory.value = cards.distinctBy { it.id }
+    }
+
     fun isAlreadyCaptured(cardId: String): Boolean = capturedIds.contains(cardId)
+
+    fun clear() {
+        capturedIds.clear()
+        _inventory.value = emptyList()
+    }
 }

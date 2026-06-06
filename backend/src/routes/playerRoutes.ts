@@ -4,6 +4,7 @@ import {
   getPlayer,
   updatePlayerLocation,
   getPlayerInventory,
+  getPlayerInventoryCards,
   getLeaderboard
 } from "../services/playerService";
 
@@ -70,6 +71,17 @@ router.get("/:id/inventory", (req: Request, res: Response) => {
   }
   const inventory = getPlayerInventory(req.params.id as string);
   res.json({ playerId: req.params.id, inventory });
+});
+
+// GET /api/players/:id/inventory/cards
+router.get("/:id/inventory/cards", (req: Request, res: Response) => {
+  const player = getPlayer(req.params.id as string);
+  if (!player) {
+    res.status(404).json({ error: "Joueur introuvable" });
+    return;
+  }
+  const cards = getPlayerInventoryCards(req.params.id as string);
+  res.json(cards);
 });
 
 // GET /api/players/:id/score

@@ -1,6 +1,7 @@
 package com.example.geopeople.ui.inventory
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,9 +27,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.geopeople.R
 import com.example.geopeople.model.GeoCard
 import java.text.Normalizer
 
@@ -55,10 +58,11 @@ private val InventoryAccent = Color(0xFFFFCB05)
 @Composable
 fun InventoryScreen(
     inventory: List<GeoCard>,
+    onLeaderboardClick: () -> Unit = {},
     onCardClick: (GeoCard) -> Unit = {}
 ) {
     if (inventory.isEmpty()) {
-        EmptyInventory()
+        EmptyInventory(onLeaderboardClick = onLeaderboardClick)
         return
     }
 
@@ -84,7 +88,8 @@ fun InventoryScreen(
                 cardCount = inventory.size,
                 collectionCount = collections.size,
                 baseScore = baseScore,
-                totalScore = totalScore
+                totalScore = totalScore,
+                onLeaderboardClick = onLeaderboardClick
             )
         }
 
@@ -103,7 +108,7 @@ fun InventoryScreen(
 }
 
 @Composable
-private fun EmptyInventory() {
+private fun EmptyInventory(onLeaderboardClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -132,7 +137,39 @@ private fun EmptyInventory() {
                     style = MaterialTheme.typography.bodyMedium,
                     color = InventoryMuted
                 )
+                Box(modifier = Modifier.padding(top = 8.dp)) {
+                    LeaderboardIcon(onLeaderboardClick = onLeaderboardClick)
+                }
+                Text(
+                    text = "Palmares",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = InventoryMuted
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun LeaderboardIcon(onLeaderboardClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .size(46.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onLeaderboardClick() },
+        shape = RoundedCornerShape(8.dp),
+        color = InventoryPanelLight,
+        border = BorderStroke(1.dp, InventoryBorder)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_trophy),
+                contentDescription = "Palmares",
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }
@@ -142,7 +179,8 @@ private fun InventoryHeader(
     cardCount: Int,
     collectionCount: Int,
     baseScore: Int,
-    totalScore: Int
+    totalScore: Int,
+    onLeaderboardClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -172,6 +210,8 @@ private fun InventoryHeader(
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
+                    LeaderboardIcon(onLeaderboardClick = onLeaderboardClick)
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "$totalScore",
                         style = MaterialTheme.typography.headlineMedium,

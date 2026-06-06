@@ -16,7 +16,7 @@ object ApiService {
     private const val TAG = "GeoPeopleApi"
     // for real device use 127.0.0.1
     // For emulator use 10.0.2.2, for real device use your machine's IP
-    private const val BASE_URL = "http://10.0.2.2:3000/api"
+    private const val BASE_URL = "http://127.0.0.1:3000/api"
     private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
 
     private val client = OkHttpClient.Builder()
@@ -67,6 +67,60 @@ object ApiService {
             Log.e(TAG, "getPlayer failed for playerId=$playerId", e)
             e.printStackTrace()
             null
+        }
+    }
+
+    suspend fun getLeaderboard(): List<LeaderboardPlayerResponse> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$BASE_URL/players/leaderboard")
+                .get()
+                .build()
+            Log.d(TAG, "GET ${request.url}")
+            val response = client.newCall(request).execute()
+            val json = response.body?.string() ?: return@withContext emptyList()
+            val arr = JSONArray(json)
+            val players = mutableListOf<LeaderboardPlayerResponse>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                players.add(
+                    LeaderboardPlayerResponse(
+                        id = obj.getString("id"),
+                        name = obj.optString("name", "Joueur"),
+                        score = obj.optInt("score", 0),
+                        cardCount = obj.optJSONArray("inventory")?.length() ?: 0
+                    )
+                )
+            }
+            players
+        } catch (e: Exception) {
+            Log.e(TAG, "getLeaderboard failed", e)
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun getPlayerInventoryCards(playerId: String): List<GeoCard> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$BASE_URL/players/$playerId/inventory/cards")
+                .get()
+                .build()
+            Log.d(TAG, "GET ${request.url}")
+            val response = client.newCall(request).execute()
+            val json = response.body?.string() ?: run {
+                Log.w(TAG, "getPlayerInventoryCards: empty response body, status=${response.code}")
+                return@withContext emptyList()
+            }
+            if (!response.isSuccessful) {
+                Log.w(TAG, "getPlayerInventoryCards: bad status=${response.code}")
+                return@withContext emptyList()
+            }
+            parseCardsArray(JSONArray(json))
+        } catch (e: Exception) {
+            Log.e(TAG, "getPlayerInventoryCards failed for playerId=$playerId", e)
+            e.printStackTrace()
+            emptyList()
         }
     }
 
@@ -245,6 +299,13 @@ data class PlayerResponse(
     val longitude: Double,
     val score: Int,
     val inventory: List<String>
+)
+
+data class LeaderboardPlayerResponse(
+    val id: String,
+    val name: String,
+    val score: Int,
+    val cardCount: Int
 )
 
 data class CaptureResponse(

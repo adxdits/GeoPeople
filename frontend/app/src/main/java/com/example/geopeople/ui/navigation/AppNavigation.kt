@@ -38,6 +38,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.geopeople.model.GeoCard
 import com.example.geopeople.ui.inventory.CardDetailScreen
 import com.example.geopeople.ui.inventory.InventoryScreen
+import com.example.geopeople.ui.leaderboard.LeaderboardScreen
 import com.example.geopeople.ui.map.GameScreen
 import com.example.geopeople.viewmodel.GameViewModel
 import org.osmdroid.config.Configuration
@@ -48,13 +49,16 @@ import org.osmdroid.views.MapView
 @Composable
 fun AppNavigation(viewModel: GameViewModel) {
     val context = LocalContext.current
+    val needsPlayerName by viewModel.needsPlayerName.collectAsState()
+    val serverConnectionMessage by viewModel.serverConnectionMessage.collectAsState()
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = currentRoute == "main"
     var selectedTab by remember { mutableStateOf(MainTab.Map) }
     var selectedDetailCard by remember { mutableStateOf<GeoCard?>(null) }
-    val mapView = remember {
+    val showBottomBar = currentRoute == "main" && selectedDetailCard == null
+    var mapViewGeneration by remember { mutableStateOf(0) }
+    val mapView = remember(mapViewGeneration) {
         Configuration.getInstance().userAgentValue = context.packageName
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
@@ -70,13 +74,37 @@ fun AppNavigation(viewModel: GameViewModel) {
         }
     }
 
+    if (needsPlayerName) {
+        PlayerNameScreen(
+            onSubmit = { name -> viewModel.createNewPlayer(name) }
+        )
+        serverConnectionMessage?.let { message ->
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissServerConnectionMessage() },
+                title = { Text("Serveur indisponible") },
+                text = { Text(message) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissServerConnectionMessage() }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        return
+    }
+
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
                 BottomTextNavigation(
                     selectedTab = selectedTab,
                     onMapClick = { selectedTab = MainTab.Map },
-                    onInventoryClick = { selectedTab = MainTab.Inventory }
+                    onInventoryClick = { selectedTab = MainTab.Inventory },
+                    onProfileClick = {
+                        selectedDetailCard = null
+                        viewModel.selectCard(null)
+                        selectedTab = MainTab.Profile
+                    }
                 )
             }
         }
@@ -96,21 +124,32 @@ fun AppNavigation(viewModel: GameViewModel) {
                     viewModel = viewModel,
                     mapView = mapView,
                     selectedTab = selectedTab,
+                    onLeaderboardClick = {
+                        selectedTab = MainTab.Leaderboard
+                        viewModel.refreshLeaderboard()
+                    },
+                    onLeaderboardBack = { selectedTab = MainTab.Inventory },
+                    onLogout = {
+                        selectedTab = MainTab.Map
+                        selectedDetailCard = null
+                        mapViewGeneration += 1
+                        viewModel.logoutPlayer()
+                    },
                     onCardClick = { card ->
                         selectedDetailCard = card
-                        navController.navigate("cardDetail")
                     }
                 )
-            }
-            composable("cardDetail") {
-                val card = selectedDetailCard
-                if (card == null) {
-                    LaunchedEffect(Unit) { navController.popBackStack() }
-                } else {
-                    CardDetailScreen(
-                        card = card,
-                        onBack = { navController.popBackStack() }
-                    )
+
+                selectedDetailCard?.let { card ->
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        CardDetailScreen(
+                            card = card,
+                            onBack = { selectedDetailCard = null }
+                        )
+                    }
                 }
             }
         }
@@ -119,7 +158,9 @@ fun AppNavigation(viewModel: GameViewModel) {
 
 private enum class MainTab {
     Map,
-    Inventory
+    Inventory,
+    Leaderboard,
+    Profile
 }
 
 @Composable
@@ -127,9 +168,16 @@ private fun MainTabsScreen(
     viewModel: GameViewModel,
     mapView: MapView,
     selectedTab: MainTab,
+    onLeaderboardClick: () -> Unit,
+    onLeaderboardBack: () -> Unit,
+    onLogout: () -> Unit,
     onCardClick: (GeoCard) -> Unit
 ) {
     val inventory by viewModel.inventory.collectAsState()
+    val currentPlayerId by viewModel.currentPlayerId.collectAsState()
+    val playerName by viewModel.playerName.collectAsState()
+    val playerScore by viewModel.playerScore.collectAsState()
+    val leaderboard by viewModel.leaderboard.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
         GameScreen(
@@ -144,9 +192,29 @@ private fun MainTabsScreen(
             ) {
                 InventoryScreen(
                     inventory = inventory,
+                    onLeaderboardClick = onLeaderboardClick,
                     onCardClick = onCardClick
                 )
             }
+        }
+
+        if (selectedTab == MainTab.Leaderboard) {
+            LeaderboardScreen(
+                currentPlayerId = currentPlayerId,
+                currentPlayerName = playerName,
+                currentPlayerScore = playerScore,
+                players = leaderboard,
+                onRefresh = { viewModel.refreshLeaderboard() },
+                onBack = onLeaderboardBack
+            )
+        }
+
+        if (selectedTab == MainTab.Profile) {
+            ProfileScreen(
+                playerName = playerName,
+                playerScore = playerScore,
+                onLogout = onLogout
+            )
         }
     }
 }
@@ -155,7 +223,8 @@ private fun MainTabsScreen(
 private fun BottomTextNavigation(
     selectedTab: MainTab,
     onMapClick: () -> Unit,
-    onInventoryClick: () -> Unit
+    onInventoryClick: () -> Unit,
+    onProfileClick: () -> Unit
 ) {
     Surface(
         color = Color(0xFFF3F4F8),
@@ -179,6 +248,12 @@ private fun BottomTextNavigation(
                 label = "Inventaire",
                 selected = selectedTab == MainTab.Inventory,
                 onClick = onInventoryClick,
+                modifier = Modifier.weight(1f)
+            )
+            NavigationTab(
+                label = "Profil",
+                selected = selectedTab == MainTab.Profile,
+                onClick = onProfileClick,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -214,6 +289,123 @@ private fun NavigationTab(
             style = MaterialTheme.typography.titleSmall,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
         )
+    }
+}
+
+@Composable
+private fun ProfileScreen(
+    playerName: String,
+    playerScore: Int,
+    onLogout: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0E1620))
+            .padding(20.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            color = Color(0xFF17212B),
+            border = BorderStroke(1.dp, Color(0xFF334253))
+        ) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "Profil",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White
+                )
+                Text(
+                    text = playerName,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFFCB05)
+                )
+                Text(
+                    text = "$playerScore points",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color(0xFFB7C2CD)
+                )
+                Button(
+                    onClick = onLogout,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFCB05),
+                        contentColor = Color(0xFF17212B)
+                    )
+                ) {
+                    Text(
+                        text = "Changer de joueur",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerNameScreen(onSubmit: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    val canSubmit = name.trim().isNotEmpty()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0E1620))
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Bienvenue",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White
+            )
+            Text(
+                text = "Choisis ton nom de joueur.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color(0xFFB7C2CD)
+            )
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("Nom") }
+            )
+            Button(
+                onClick = { onSubmit(name) },
+                enabled = canSubmit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFFCB05),
+                    contentColor = Color(0xFF17212B)
+                )
+            ) {
+                Text(
+                    text = "Continuer",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     }
 }
 
