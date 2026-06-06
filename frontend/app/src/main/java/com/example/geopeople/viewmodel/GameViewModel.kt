@@ -37,6 +37,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _captureMessage = MutableStateFlow<String?>(null)
     val captureMessage: StateFlow<String?> = _captureMessage.asStateFlow()
 
+    private val _serverConnectionMessage = MutableStateFlow<String?>(null)
+    val serverConnectionMessage: StateFlow<String?> = _serverConnectionMessage.asStateFlow()
+
     private val _playerScore = MutableStateFlow(0)
     val playerScore: StateFlow<Int> = _playerScore.asStateFlow()
 
@@ -48,6 +51,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var lastFetchLon: Double? = null
     private var lastSyncLat: Double? = null
     private var lastSyncLon: Double? = null
+    private var serverConnectionPopupDismissed = false
 
     private val prefs = application.getSharedPreferences("geopeople", Context.MODE_PRIVATE)
 
@@ -68,6 +72,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     Log.d(TAG, "Registered player id=${player.id} score=${player.score}")
                 } else {
                     Log.w(TAG, "Player registration failed")
+                    _isConnected.value = false
+                    if (!serverConnectionPopupDismissed) {
+                        _serverConnectionMessage.value = "Connexion au serveur impossible."
+                    }
                 }
             } else {
                 Log.d(TAG, "Restoring playerId=$playerId")
@@ -78,6 +86,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     Log.d(TAG, "Restored player id=${player.id} score=${player.score}")
                 } else {
                     Log.w(TAG, "Could not restore playerId=$playerId")
+                    _isConnected.value = false
+                    if (!serverConnectionPopupDismissed) {
+                        _serverConnectionMessage.value = "Connexion au serveur impossible."
+                    }
                 }
             }
         }
@@ -102,8 +114,22 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 ).isNotEmpty()
                 if (fetchDistance == null || fetchDistance > 5000 || !hasPlayableCard) {
                     Log.d(TAG, "Loading cards around lat=${loc.latitude} lon=${loc.longitude}, moved=${fetchDistance ?: "first load"}m")
-                    // Try backend first, fallback to Wikidata
-                    val backendCards = ApiService.getNearbyCards(loc.latitude, loc.longitude)
+                    val backendResponse = ApiService.getNearbyCardsResult(loc.latitude, loc.longitude)
+                    if (!backendResponse.success) {
+                        _isConnected.value = false
+                        if (!serverConnectionPopupDismissed) {
+                            _serverConnectionMessage.value = backendResponse.message.ifBlank {
+                                "Connexion au serveur impossible. Nouvelle tentative en cours..."
+                            }
+                        }
+                        Log.w(TAG, "Backend unavailable: ${backendResponse.message}")
+                        return@collect
+                    }
+
+                    _isConnected.value = true
+                    serverConnectionPopupDismissed = false
+                    _serverConnectionMessage.value = null
+                    val backendCards = backendResponse.cards
                     val playableBackendCards = backendCards.filter {
                         DistanceUtils.haversine(loc.latitude, loc.longitude, it.latitude, it.longitude) <= 500.0
                     }
@@ -113,7 +139,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         Log.d(TAG, "Using backend cards count=${backendCards.size}")
                         cardRepository.setCards(backendCards)
                     } else {
-                        Log.w(TAG, "Backend returned ${backendCards.size} cards but ${playableBackendCards.size} playable cards, falling back to local/Wikidata cards")
+                        Log.w(TAG, "Backend returned ${backendCards.size} cards but ${playableBackendCards.size} playable cards, falling back to Wikidata cards")
                         cardRepository.loadCardsAround(loc.latitude, loc.longitude)
                         val playableFallbackCards = cardRepository.getCardsInRange(
                             loc.latitude,
@@ -177,14 +203,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val loc = playerLocation.value ?: return
         if (captureManager.canCapture(loc.latitude, loc.longitude, card)) {
             viewModelScope.launch {
-                if (card.id.startsWith("local-demo-")) {
-                    Log.d(TAG, "Capturing local fallback card id=${card.id}")
-                    captureManager.capture(card)
-                    _captureSuccess.value = true
-                    _selectedCard.value = null
-                    return@launch
-                }
-
                 val id = playerId
                 if (id == null) {
                     _captureMessage.value = "Joueur non connecte au backend"
@@ -214,6 +232,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissCaptureMessage() {
         _captureMessage.value = null
+    }
+
+    fun dismissServerConnectionMessage() {
+        serverConnectionPopupDismissed = true
+        _serverConnectionMessage.value = null
     }
 
     fun dismissCaptureSuccess() {

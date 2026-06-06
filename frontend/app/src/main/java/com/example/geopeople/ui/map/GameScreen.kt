@@ -63,6 +63,7 @@ fun GameScreen(
     val selectedCard by viewModel.selectedCard.collectAsState()
     val captureSuccess by viewModel.captureSuccess.collectAsState()
     val captureMessage by viewModel.captureMessage.collectAsState()
+    val serverConnectionMessage by viewModel.serverConnectionMessage.collectAsState()
     val inventory by viewModel.inventory.collectAsState()
     var pendingCaptureCard by remember { mutableStateOf<GeoCard?>(null) }
     var previousDistanceByCard by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
@@ -173,11 +174,28 @@ fun GameScreen(
                 onDismissRequest = { viewModel.dismissCaptureMessage() },
                 confirmButton = {
                     androidx.compose.material3.TextButton(onClick = { viewModel.dismissCaptureMessage() }) {
-                        androidx.compose.material3.Text("OK")
+                        Text("OK")
                     }
                 },
-                title = { androidx.compose.material3.Text("Capture") },
-                text = { androidx.compose.material3.Text(message) }
+                title = { Text("Capture") },
+                text = { Text(message) }
+            )
+        }
+
+        serverConnectionMessage?.let { message ->
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { viewModel.dismissServerConnectionMessage() },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = { viewModel.dismissServerConnectionMessage() }) {
+                        Text("OK")
+                    }
+                },
+                title = { Text("Serveur indisponible") },
+                text = {
+                    Text(
+                        "$message\n\nL'application va continuer a essayer de se reconnecter."
+                    )
+                }
             )
         }
     }

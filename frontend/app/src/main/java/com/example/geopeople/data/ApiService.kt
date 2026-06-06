@@ -16,7 +16,7 @@ object ApiService {
     private const val TAG = "GeoPeopleApi"
     // for real device use 127.0.0.1
     // For emulator use 10.0.2.2, for real device use your machine's IP
-    private const val BASE_URL = "http://127.0.0.1:3000/api"
+    private const val BASE_URL = "http://10.0.2.2:3000/api"
     private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
 
     private val client = OkHttpClient.Builder()
@@ -95,6 +95,9 @@ object ApiService {
     // --- Cards endpoints ---
 
     suspend fun getNearbyCards(lat: Double, lon: Double, radiusKm: Int = 20): List<GeoCard> =
+        getNearbyCardsResult(lat, lon, radiusKm).cards
+
+    suspend fun getNearbyCardsResult(lat: Double, lon: Double, radiusKm: Int = 20): CardsResponse =
         withContext(Dispatchers.IO) {
             try {
                 val request = Request.Builder()
@@ -105,15 +108,34 @@ object ApiService {
                 val response = client.newCall(request).execute()
                 val json = response.body?.string() ?: run {
                     Log.w(TAG, "getNearbyCards: empty response body, status=${response.code}")
-                    return@withContext emptyList()
+                    return@withContext CardsResponse(
+                        success = false,
+                        cards = emptyList(),
+                        message = "Réponse serveur vide"
+                    )
+                }
+                if (!response.isSuccessful) {
+                    Log.w(TAG, "getNearbyCards: bad status=${response.code}")
+                    return@withContext CardsResponse(
+                        success = false,
+                        cards = emptyList(),
+                        message = "Serveur indisponible (${response.code})"
+                    )
                 }
                 val cards = parseCardsArray(JSONArray(json))
                 Log.d(TAG, "getNearbyCards: status=${response.code} count=${cards.size}")
-                cards
+                CardsResponse(
+                    success = true,
+                    cards = cards
+                )
             } catch (e: Exception) {
                 Log.e(TAG, "getNearbyCards failed lat=$lat lon=$lon radiusKm=$radiusKm", e)
                 e.printStackTrace()
-                emptyList()
+                CardsResponse(
+                    success = false,
+                    cards = emptyList(),
+                    message = "Connexion au serveur impossible"
+                )
             }
         }
 
@@ -224,4 +246,10 @@ data class PlayerResponse(
 data class CaptureResponse(
     val success: Boolean,
     val message: String
+)
+
+data class CardsResponse(
+    val success: Boolean,
+    val cards: List<GeoCard>,
+    val message: String = ""
 )
