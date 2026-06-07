@@ -17,7 +17,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.geopeople.R
 import kotlin.math.min
 
 @Composable
@@ -36,12 +38,12 @@ fun MemorySettingsScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Memory Game",
+            text = stringResource(R.string.memory_game_title),
             style = MaterialTheme.typography.headlineLarge
         )
         Spacer(modifier = Modifier.height(48.dp))
         Text(
-            text = "Nombre de paires : $numberOfPairs",
+            text = stringResource(R.string.memory_pair_count, numberOfPairs),
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -53,7 +55,7 @@ fun MemorySettingsScreen(
         )
         Spacer(modifier = Modifier.height(48.dp))
         Button(onClick = { onStartGame(numberOfPairs) }) {
-            Text("Jouer !")
+            Text(stringResource(R.string.memory_play))
         }
     }
 }

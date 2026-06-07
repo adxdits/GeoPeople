@@ -40,12 +40,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mini_game.controller.GameEngine
+import com.example.geopeople.R
 import com.example.mini_game.model.GameResult
 import com.example.mini_game.model.PlatformType
 import com.example.mini_game.controller.AccelerometerManager
@@ -300,7 +302,7 @@ private fun JumpFallbackButton(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 32.dp)
         ) {
-            Text("Jump")
+            Text(stringResource(R.string.pokeball_jump))
         }
     }
 }
@@ -314,14 +316,14 @@ private fun HudOverlay(scoreState: MutableIntState, timeState: MutableIntState) 
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = "Score: ${scoreState.intValue}",
+            text = stringResource(R.string.pokeball_score, scoreState.intValue),
             color = Color.White,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold
         )
         val time = timeState.intValue
         Text(
-            text = "${time}s",
+            text = stringResource(R.string.pokeball_time, time),
             color = if (time < 5) Color(0xFFFF5252) else Color.White,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold
@@ -329,7 +331,7 @@ private fun HudOverlay(scoreState: MutableIntState, timeState: MutableIntState) 
     }
     Box(modifier = Modifier.fillMaxSize()) {
         Text(
-            text = "Goal: ${GameEngine.WIN_SCORE}",
+            text = stringResource(R.string.pokeball_goal, GameEngine.WIN_SCORE),
             color = Color.White.copy(alpha = 0.5f),
             fontSize = 14.sp,
             modifier = Modifier
@@ -344,7 +346,7 @@ private fun ClapHint(visibleState: MutableState<Boolean>) {
     if (!visibleState.value) return
     Box(modifier = Modifier.fillMaxSize()) {
         Text(
-            text = "Clap to jump",
+            text = stringResource(R.string.pokeball_clap_hint),
             color = Color.White.copy(alpha = 0.7f),
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
@@ -371,13 +373,13 @@ private fun ResultOverlays(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "WINNER!",
+                        text = stringResource(R.string.pokeball_winner),
                         color = Color(0xFFFFD700).copy(alpha = winnerAlpha.value),
                         fontSize = 64.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        text = "Card Captured!",
+                        text = stringResource(R.string.pokeball_card_captured),
                         color = Color.White.copy(alpha = winnerAlpha.value),
                         fontSize = 24.sp,
                         modifier = Modifier.padding(top = 12.dp)
@@ -394,13 +396,13 @@ private fun ResultOverlays(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "GAME OVER",
+                        text = stringResource(R.string.pokeball_game_over),
                         color = Color(0xFFFF5252),
                         fontSize = 48.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        text = "Score: ${scoreState.intValue} / 1000",
+                        text = stringResource(R.string.pokeball_final_score, scoreState.intValue),
                         color = Color.White,
                         fontSize = 22.sp,
                         modifier = Modifier.padding(top = 12.dp)

@@ -20,8 +20,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.geopeople.R
 import com.example.geopeople.model.GeoCard
 import kotlinx.coroutines.delay
 
@@ -39,7 +41,7 @@ fun CaptureOverlay(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val distanceText = if (distance.isFinite()) "${distance.toInt()} m" else "GPS en attente"
+    val distanceText = if (distance.isFinite()) "${distance.toInt()} m" else stringResource(R.string.capture_gps_waiting)
     val remainingMeters = (distance - CAPTURE_RANGE_METERS).coerceAtLeast(0.0)
     val progress = if (distance.isFinite()) {
         ((HELP_RANGE_METERS - distance) / (HELP_RANGE_METERS - CAPTURE_RANGE_METERS))
@@ -55,10 +57,10 @@ fun CaptureOverlay(
         else -> Color(0xFF5267A0)
     }
     val statusText = when {
-        alreadyCaptured -> "Carte deja capturee"
-        canCapture -> "Capture possible"
-        distance.isFinite() -> "Encore ${remainingMeters.toInt()} m avant capture"
-        else -> "Position GPS en attente"
+        alreadyCaptured -> stringResource(R.string.capture_card_already_captured)
+        canCapture -> stringResource(R.string.capture_possible)
+        distance.isFinite() -> stringResource(R.string.capture_remaining_meters, remainingMeters.toInt())
+        else -> stringResource(R.string.capture_position_waiting)
     }
     val bearingText = bearingDegrees?.let { "${it.toInt()} deg" } ?: "--"
 
@@ -96,7 +98,7 @@ fun CaptureOverlay(
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, "Fermer")
+                        Icon(Icons.Default.Close, stringResource(R.string.capture_close_content_description))
                     }
                 }
                 Text(card.description, style = MaterialTheme.typography.bodyMedium)
@@ -145,20 +147,20 @@ fun CaptureOverlay(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Distance: $distanceText", style = MaterialTheme.typography.bodySmall)
-                            Text("Direction: $bearingText", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.capture_distance, distanceText), style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.capture_direction, bearingText), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Puissance: ${card.power}", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.capture_power, card.power), style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 when {
                     alreadyCaptured -> {
                         Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
-                            Text("Déjà capturée ✓")
+                            Text(stringResource(R.string.capture_already_captured_button))
                         }
                     }
                     canCapture -> {
@@ -167,12 +169,12 @@ fun CaptureOverlay(
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                         ) {
-                            Text("Capturer !")
+                            Text(stringResource(R.string.capture_button))
                         }
                     }
                     else -> {
                         Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
-                            Text("Trop loin (approchez à < 50m)")
+                            Text(stringResource(R.string.capture_too_far))
                         }
                     }
                 }
@@ -259,7 +261,7 @@ fun CaptureSuccessAnimation(onDismiss: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            "Carte capturée !",
+            stringResource(R.string.capture_success),
             modifier = Modifier
                 .scale(scale)
                 .alpha(alpha),

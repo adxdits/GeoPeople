@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.geopeople.ui.navigation.AppNavigation
@@ -72,7 +73,7 @@ fun LocationPermissionWrapper(viewModel: GameViewModel) {
         AppNavigation(viewModel)
     } else {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Permission de localisation requise")
+            Text(stringResource(R.string.location_permission_required))
         }
     }
 }

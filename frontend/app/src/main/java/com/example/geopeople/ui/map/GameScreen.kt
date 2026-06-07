@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.geopeople.R
@@ -77,7 +78,7 @@ fun GameScreen(
         if (result.resultCode == Activity.RESULT_OK) {
             viewModel.captureAfterMiniGame(card)
         } else {
-            viewModel.reportCaptureFailure("Mini-jeu perdu : la carte reste verrouillee.")
+            viewModel.reportCaptureFailure(context.getString(R.string.capture_minigame_lost))
         }
     }
 
@@ -152,8 +153,8 @@ fun GameScreen(
                 card = card,
                 distance = distance,
                 bearingDegrees = bearing,
-                directionLabel = bearing?.let(::compassLabel) ?: "GPS",
-                approachMessage = approachState.message,
+                directionLabel = bearing?.let(::compassLabel) ?: stringResource(R.string.capture_direction_gps),
+                approachMessage = approachState.message(),
                 approachSignal = approachState.signal,
                 canCapture = distance <= CaptureManager.CAPTURE_RANGE && !capturedIds.contains(card.id),
                 alreadyCaptured = capturedIds.contains(card.id),
@@ -176,10 +177,10 @@ fun GameScreen(
                 onDismissRequest = { viewModel.dismissCaptureMessage() },
                 confirmButton = {
                     androidx.compose.material3.TextButton(onClick = { viewModel.dismissCaptureMessage() }) {
-                        Text("OK")
+                        Text(stringResource(R.string.action_ok))
                     }
                 },
-                title = { Text("Capture") },
+                title = { Text(stringResource(R.string.capture_dialog_title)) },
                 text = { Text(message) }
             )
         }
@@ -189,13 +190,13 @@ fun GameScreen(
                 onDismissRequest = { viewModel.dismissServerConnectionMessage() },
                 confirmButton = {
                     androidx.compose.material3.TextButton(onClick = { viewModel.dismissServerConnectionMessage() }) {
-                        Text("OK")
+                        Text(stringResource(R.string.action_ok))
                     }
                 },
-                title = { Text("Serveur indisponible") },
+                title = { Text(stringResource(R.string.server_unavailable)) },
                 text = {
                     Text(
-                        "$message\n\nL'application va continuer a essayer de se reconnecter."
+                        stringResource(R.string.server_retry_message, message)
                     )
                 }
             )
@@ -203,11 +204,19 @@ fun GameScreen(
     }
 }
 
-private enum class ApproachState(val message: String, val signal: Int) {
-    Unknown("Deplace-toi pour activer l'aide de capture.", 0),
-    Closer("Tu te rapproches de la carte.", 1),
-    Farther("Tu t'eloignes de la carte.", -1),
-    Stable("Distance stable.", 0)
+private enum class ApproachState(val signal: Int) {
+    Unknown(0),
+    Closer(1),
+    Farther(-1),
+    Stable(0)
+}
+
+@Composable
+private fun ApproachState.message(): String = when (this) {
+    ApproachState.Unknown -> stringResource(R.string.approach_unknown)
+    ApproachState.Closer -> stringResource(R.string.approach_closer)
+    ApproachState.Farther -> stringResource(R.string.approach_farther)
+    ApproachState.Stable -> stringResource(R.string.approach_stable)
 }
 
 private fun bearingDegrees(fromLat: Double, fromLon: Double, toLat: Double, toLon: Double): Double {
@@ -252,17 +261,17 @@ private fun MapStatusPanel(
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "GeoPeople",
+                    text = stringResource(R.string.map_status_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF17212B)
                 )
                 Text(
                     text = when {
-                        !hasLocation -> "GPS en attente. Dans l'emulateur: Location > set position near Googleplex."
-                        visibleCards > 0 -> "$visibleCards carte(s) proche(s). Tape un marqueur pour capturer."
-                        loadedCards > 0 -> "Cartes chargees, mais aucune a moins de 500 m."
-                        else -> "Connexion backend/cartes en cours..."
+                        !hasLocation -> stringResource(R.string.map_status_no_gps)
+                        visibleCards > 0 -> stringResource(R.string.map_status_visible_cards, visibleCards)
+                        loadedCards > 0 -> stringResource(R.string.map_status_loaded_no_nearby)
+                        else -> stringResource(R.string.map_status_loading)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF40515F)

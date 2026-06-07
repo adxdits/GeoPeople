@@ -15,9 +15,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.geopeople.R
 
 @Composable
 fun SnakeGame(
@@ -94,8 +96,8 @@ private fun HUD(state: SnakeGameState) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        LabeledValue("POMMES", "${state.apples.size} / ${state.totalApples}", SnakeTheme.Apple)
-        LabeledValue("VITESSE", state.speed.label, state.speed.color)
+        LabeledValue(stringResource(R.string.snake_hud_apples), "${state.apples.size} / ${state.totalApples}", SnakeTheme.Apple)
+        LabeledValue(stringResource(R.string.snake_hud_speed), stringResource(state.speed.labelRes), state.speed.color)
     }
 }
 
@@ -119,12 +121,12 @@ private fun GameOverOverlay(state: SnakeGameState, onRestart: () -> Unit) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                if (isWin) "GAGNER" else "PERDU",
+                if (isWin) stringResource(R.string.snake_win) else stringResource(R.string.snake_lost),
                 color = if (isWin) SnakeTheme.Gold else SnakeTheme.Apple,
                 fontSize = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp
             )
             Spacer(Modifier.height(4.dp))
-            Text("Pommes : ${state.score} / ${state.totalApples}",
+            Text(stringResource(R.string.snake_apples_score, state.score, state.totalApples),
                 color = SnakeTheme.Apple, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(24.dp))
             Button(
@@ -134,7 +136,7 @@ private fun GameOverOverlay(state: SnakeGameState, onRestart: () -> Unit) {
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("REJOUER", color = Color.Black,
+                Text(stringResource(R.string.snake_replay), color = Color.Black,
                     fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
             }
         }

@@ -14,8 +14,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.geopeople.R
 import com.example.tp4.model.MemoryCard
 import com.example.tp4.ui.components.Chronometer
 import com.example.tp4.viewmodel.BoardViewModel
@@ -65,8 +67,8 @@ fun MemoryBoardManager(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Paires : ${viewModel.pairsFound}/${viewModel.totalPairs}")
-            Text("Tentatives : ${viewModel.attempts}")
+            Text(stringResource(R.string.memory_pairs, viewModel.pairsFound, viewModel.totalPairs))
+            Text(stringResource(R.string.memory_attempts, viewModel.attempts))
             Chronometer(startTime = viewModel.startTime)
         }
 

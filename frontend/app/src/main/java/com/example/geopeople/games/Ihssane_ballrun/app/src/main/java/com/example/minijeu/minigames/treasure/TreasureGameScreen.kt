@@ -26,10 +26,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.example.geopeople.R
 import com.example.minijeu.sensors.MotionSensorHandler
 import kotlinx.coroutines.delay
 import java.io.File
@@ -58,7 +60,7 @@ fun TreasureGameScreen(
     var breathCount by remember { mutableStateOf(0) }
     var micLevel by remember { mutableStateOf(0) }
     var collectedStars by remember { mutableStateOf(setOf<Int>()) }
-    var message by remember { mutableStateOf("Reste sur la piste jusqu'a la carte biographique.") }
+    var message by remember { mutableStateOf(context.getString(R.string.treasure_initial_message)) }
     var hasAudioPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -81,7 +83,7 @@ fun TreasureGameScreen(
         breathCount = 0
         micLevel = 0
         collectedStars = emptySet()
-        message = "Reste sur la piste jusqu'a la carte biographique."
+        message = context.getString(R.string.treasure_initial_message)
         phase = GamePhase.Playing
     }
 
@@ -90,9 +92,9 @@ fun TreasureGameScreen(
     ) { isGranted ->
         hasAudioPermission = isGranted
         message = if (isGranted) {
-            "Micro pret. Souffle quand la carte est couverte de poussiere."
+            context.getString(R.string.treasure_micro_ready_dust)
         } else {
-            "Permission micro refusee."
+            context.getString(R.string.treasure_micro_denied)
         }
     }
 
@@ -175,10 +177,10 @@ fun TreasureGameScreen(
 
                 if (collectedStars.size == stars.size) {
                     phase = GamePhase.Treasure
-                    message = "Carte retrouvee ! Secoue le telephone pour la degager."
+                    message = context.getString(R.string.treasure_card_found)
                 } else {
                     treasureDistance += config.finishDistance
-                    message = "Carte verrouillee : il manque ${stars.size - collectedStars.size} indice(s). Continue !"
+                    message = context.getString(R.string.treasure_card_locked, stars.size - collectedStars.size)
                 }
             }
 
@@ -192,14 +194,14 @@ fun TreasureGameScreen(
         while (phase == GamePhase.Treasure) {
             if (shakePower > config.shakeThreshold) {
                 shakeProgress = (shakeProgress + 0.035f).coerceAtMost(1f)
-                message = "Carte degagee : ${(shakeProgress * 100).toInt()}%"
+                message = context.getString(R.string.treasure_card_clear_percent, (shakeProgress * 100).toInt())
             } else {
                 shakeProgress = (shakeProgress - 0.006f).coerceAtLeast(0f)
             }
 
             if (shakeProgress >= 1f) {
                 phase = GamePhase.Cleaning
-                message = "La carte apparait, mais elle est poussiereuse. Souffle 2 fois."
+                message = context.getString(R.string.treasure_blow_twice)
             }
 
             delay(50)
@@ -227,11 +229,11 @@ fun TreasureGameScreen(
                 if (micLevel > config.breathThreshold && !soundCooldown) {
                     breathCount++
                     soundCooldown = true
-                    message = "Poussiere retiree : $breathCount / 2."
+                    message = context.getString(R.string.treasure_dust_removed, breathCount)
 
                     if (breathCount >= 2) {
                         phase = GamePhase.Won
-                        message = "Carte biographique capturee !"
+                        message = context.getString(R.string.treasure_card_captured)
                     }
 
                     delay(800)
@@ -241,7 +243,7 @@ fun TreasureGameScreen(
                 delay(100)
             }
         } catch (exception: Exception) {
-            message = "Micro indisponible : ${exception.message ?: exception.javaClass.simpleName}"
+            message = context.getString(R.string.treasure_micro_unavailable, exception.message ?: exception.javaClass.simpleName)
         } finally {
             try {
                 recorder.stop()
@@ -273,14 +275,14 @@ fun TreasureGameScreen(
             .padding(16.dp)
     ) {
         Text(
-            text = "Piste Biographique",
+            text = stringResource(R.string.treasure_title),
             color = Color(0xFFEAF2FF),
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold
         )
 
         Text(
-            text = "Suis la piste, collecte les indices, revele la carte.",
+            text = stringResource(R.string.treasure_subtitle),
             color = Color(0xFFA9B8CC),
             fontSize = 15.sp
         )
@@ -324,7 +326,7 @@ fun TreasureGameScreen(
                 onClick = { velocityX -= config.buttonImpulse },
                 enabled = phase == GamePhase.Playing
             ) {
-                Text(text = "Gauche")
+                Text(text = stringResource(R.string.treasure_left))
             }
 
             Spacer(modifier = Modifier.padding(8.dp))
@@ -333,13 +335,13 @@ fun TreasureGameScreen(
                 onClick = { velocityX += config.buttonImpulse },
                 enabled = phase == GamePhase.Playing
             ) {
-                Text(text = "Droite")
+                Text(text = stringResource(R.string.treasure_right))
             }
 
             Spacer(modifier = Modifier.padding(8.dp))
 
             Button(onClick = { restartGame() }) {
-                Text(text = "Recommencer")
+                Text(text = stringResource(R.string.treasure_restart))
             }
         }
 
@@ -351,12 +353,12 @@ fun TreasureGameScreen(
                     if (!hasAudioPermission) {
                         audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     } else {
-                        message = "Micro pret. Souffle quand la carte apparait."
+                        message = context.getString(R.string.treasure_micro_ready_short)
                     }
                 },
                 enabled = phase == GamePhase.Cleaning
             ) {
-                Text(text = "Activer micro")
+                Text(text = stringResource(R.string.treasure_enable_micro))
             }
         }
 
@@ -364,7 +366,7 @@ fun TreasureGameScreen(
 
         Text(
             text = if (phase == GamePhase.Cleaning && hasAudioPermission) {
-                "$message | Micro : $micLevel"
+                stringResource(R.string.treasure_micro_level, message, micLevel)
             } else {
                 message
             },
@@ -374,6 +376,7 @@ fun TreasureGameScreen(
     }
 }
 
+@Composable
 private fun statusText(
     phase: GamePhase,
     safeFrames: Int,
@@ -385,15 +388,15 @@ private fun statusText(
     breathCount: Int
 ): String {
     return when (phase) {
-        GamePhase.Won -> "Carte biographique capturee !"
-        GamePhase.Lost -> "Perdu : tu es sorti de la piste."
-        GamePhase.Treasure -> "Degage la carte : ${(shakeProgress * 100).toInt()}%"
-        GamePhase.Cleaning -> "Souffle pour nettoyer : $breathCount / 2"
+        GamePhase.Won -> stringResource(R.string.treasure_card_captured)
+        GamePhase.Lost -> stringResource(R.string.treasure_lost)
+        GamePhase.Treasure -> stringResource(R.string.treasure_clear_card, (shakeProgress * 100).toInt())
+        GamePhase.Cleaning -> stringResource(R.string.treasure_clean_card, breathCount)
         GamePhase.Playing -> {
             if (safeFrames > 0) {
-                "Depart protege..."
+                stringResource(R.string.treasure_protected_start)
             } else {
-                "Progression : ${(distance / finishDistance * 100f).toInt()}% | Indices : $collectedStars/$totalStars"
+                stringResource(R.string.treasure_progress, (distance / finishDistance * 100f).toInt(), collectedStars, totalStars)
             }
         }
     }

@@ -20,9 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.geopeople.R
 import com.example.geopeople.data.LeaderboardPlayerResponse
 
 private val Background = Color(0xFF0E1620)
@@ -102,7 +104,7 @@ private fun Header(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Palmares",
+                        text = stringResource(R.string.leaderboard_title),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextMain
@@ -123,7 +125,7 @@ private fun Header(
                         color = Accent
                     )
                     Text(
-                        text = "vos points",
+                        text = stringResource(R.string.leaderboard_your_points),
                         style = MaterialTheme.typography.labelMedium,
                         color = TextMuted
                     )
@@ -132,10 +134,10 @@ private fun Header(
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onBack) {
-                    Text("Retour")
+                    Text(stringResource(R.string.action_back))
                 }
                 OutlinedButton(onClick = onRefresh) {
-                    Text("Rafraichir")
+                    Text(stringResource(R.string.action_refresh))
                 }
             }
         }
@@ -151,7 +153,7 @@ private fun EmptyLeaderboard() {
         border = BorderStroke(1.dp, Border)
     ) {
         Text(
-            text = "Aucun joueur dans le classement.",
+            text = stringResource(R.string.leaderboard_empty),
             modifier = Modifier.padding(16.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = TextMuted
@@ -192,13 +194,13 @@ private fun PlayerRankRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${player.cardCount} carte(s)",
+                    text = stringResource(R.string.leaderboard_player_cards, player.cardCount),
                     style = MaterialTheme.typography.labelMedium,
                     color = TextMuted
                 )
             }
             Text(
-                text = "${player.score} pts",
+                text = stringResource(R.string.leaderboard_player_points, player.score),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = Accent

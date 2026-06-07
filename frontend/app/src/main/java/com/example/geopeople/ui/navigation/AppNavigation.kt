@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,6 +36,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.geopeople.R
 import com.example.geopeople.model.GeoCard
 import com.example.geopeople.ui.inventory.CardDetailScreen
 import com.example.geopeople.ui.inventory.InventoryScreen
@@ -81,11 +83,11 @@ fun AppNavigation(viewModel: GameViewModel) {
         serverConnectionMessage?.let { message ->
             AlertDialog(
                 onDismissRequest = { viewModel.dismissServerConnectionMessage() },
-                title = { Text("Serveur indisponible") },
+                title = { Text(stringResource(R.string.server_unavailable)) },
                 text = { Text(message) },
                 confirmButton = {
                     TextButton(onClick = { viewModel.dismissServerConnectionMessage() }) {
-                        Text("OK")
+                        Text(stringResource(R.string.action_ok))
                     }
                 }
             )
@@ -239,19 +241,19 @@ private fun BottomTextNavigation(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             NavigationTab(
-                label = "Carte",
+                label = stringResource(R.string.nav_map),
                 selected = selectedTab == MainTab.Map,
                 onClick = onMapClick,
                 modifier = Modifier.weight(1f)
             )
             NavigationTab(
-                label = "Inventaire",
+                label = stringResource(R.string.nav_inventory),
                 selected = selectedTab == MainTab.Inventory,
                 onClick = onInventoryClick,
                 modifier = Modifier.weight(1f)
             )
             NavigationTab(
-                label = "Profil",
+                label = stringResource(R.string.nav_profile),
                 selected = selectedTab == MainTab.Profile,
                 onClick = onProfileClick,
                 modifier = Modifier.weight(1f)
@@ -316,7 +318,7 @@ private fun ProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "Profil",
+                    text = stringResource(R.string.nav_profile),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White
@@ -328,7 +330,7 @@ private fun ProfileScreen(
                     color = Color(0xFFFFCB05)
                 )
                 Text(
-                    text = "$playerScore points",
+                    text = stringResource(R.string.leaderboard_player_points, playerScore),
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color(0xFFB7C2CD)
                 )
@@ -344,7 +346,7 @@ private fun ProfileScreen(
                     )
                 ) {
                     Text(
-                        text = "Changer de joueur",
+                        text = stringResource(R.string.profile_change_player),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -371,13 +373,13 @@ private fun PlayerNameScreen(onSubmit: (String) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Bienvenue",
+                text = stringResource(R.string.welcome_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = Color.White
             )
             Text(
-                text = "Choisis ton nom de joueur.",
+                text = stringResource(R.string.welcome_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color(0xFFB7C2CD)
             )
@@ -386,7 +388,7 @@ private fun PlayerNameScreen(onSubmit: (String) -> Unit) {
                 onValueChange = { name = it },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text("Nom") }
+                label = { Text(stringResource(R.string.player_name_label)) }
             )
             Button(
                 onClick = { onSubmit(name) },
@@ -401,7 +403,7 @@ private fun PlayerNameScreen(onSubmit: (String) -> Unit) {
                 )
             ) {
                 Text(
-                    text = "Continuer",
+                    text = stringResource(R.string.continue_button),
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -448,13 +450,13 @@ private fun StartScreen(onStartClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Pars a la capture autour de toi",
+                text = stringResource(R.string.start_screen_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
             Text(
-                text = "Explore la carte, repere les personnages proches et lance une partie.",
+                text = stringResource(R.string.start_screen_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.92f),
                 modifier = Modifier.padding(top = 8.dp, bottom = 20.dp)
@@ -481,7 +483,7 @@ private fun StartScreen(onStartClick: () -> Unit) {
                 )
             ) {
                 Text(
-                    text = "START",
+                    text = stringResource(R.string.start_button),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.8.sp

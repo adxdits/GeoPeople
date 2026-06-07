@@ -12,7 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.geopeople.R
 
 @Composable
 fun MemoryEndScreen(
@@ -35,29 +37,29 @@ fun MemoryEndScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Félicitations !",
+            text = stringResource(R.string.memory_finished),
             style = MaterialTheme.typography.headlineLarge
         )
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = "Paires trouvées : $pairsFound",
+            text = stringResource(R.string.memory_pairs_found, pairsFound),
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            text = "Tentatives : $attempts",
+            text = stringResource(R.string.memory_attempts_count, attempts),
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            text = "Temps : ${minutes}min ${seconds}s",
+            text = stringResource(R.string.memory_time, stringResource(R.string.memory_elapsed_time, minutes, seconds)),
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(modifier = Modifier.height(48.dp))
         Button(onClick = onRestart) {
-            Text("Rejouer")
+            Text(stringResource(R.string.memory_replay))
         }
         Spacer(modifier = Modifier.height(12.dp))
         Button(onClick = onValidateCapture) {
-            Text("Valider la capture")
+            Text(stringResource(R.string.memory_validate_capture))
         }
     }
 }

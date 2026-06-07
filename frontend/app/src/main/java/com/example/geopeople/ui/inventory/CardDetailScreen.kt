@@ -41,8 +41,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.geopeople.R
 import com.example.geopeople.data.BiographyDetails
 import com.example.geopeople.data.BiographyService
 import com.example.geopeople.model.GeoCard
@@ -79,7 +81,7 @@ fun CardDetailScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         OutlinedButton(onClick = onBack) {
-            Text("Retour")
+            Text(stringResource(R.string.action_back))
         }
 
         HeaderCard(card = card, biography = biography)
@@ -92,7 +94,7 @@ fun CardDetailScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(28.dp))
-                    Text("Chargement des informations Wikidata et Wikipedia...")
+                    Text(stringResource(R.string.card_detail_loading))
                 }
             }
         } else {
@@ -111,7 +113,7 @@ fun CardDetailScreen(
             title = { Text(source.first) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Lien externe pour ${card.name}")
+                    Text(stringResource(R.string.card_detail_external_link_for, card.name))
                     Text(source.second, style = MaterialTheme.typography.bodySmall)
                 }
             },
@@ -122,12 +124,12 @@ fun CardDetailScreen(
                         selectedSource = null
                     }
                 ) {
-                    Text("Ouvrir")
+                    Text(stringResource(R.string.action_open))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { selectedSource = null }) {
-                    Text("Fermer")
+                    Text(stringResource(R.string.action_close))
                 }
             }
         )
@@ -153,8 +155,8 @@ private fun HeaderCard(card: GeoCard, biography: BiographyDetails?) {
             )
             Text(card.description, style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(12.dp))
-            Text("Puissance : ${card.power}", style = MaterialTheme.typography.titleMedium)
-            Text("Identifiant carte : ${card.id}", style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.card_detail_power, card.power), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.card_detail_card_id, card.id), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -188,12 +190,12 @@ private fun RemotePortrait(imageUrl: String?, name: String) {
         if (loadedBitmap != null) {
             Image(
                 bitmap = loadedBitmap,
-                contentDescription = "Portrait de $name",
+                contentDescription = stringResource(R.string.card_detail_portrait_description, name),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
         } else {
-            Text("Photo indisponible", color = Color(0xFF5B6472))
+            Text(stringResource(R.string.card_detail_no_photo), color = Color(0xFF5B6472))
         }
     }
 }
@@ -206,15 +208,15 @@ private fun BiographyInfoCard(card: GeoCard, biography: BiographyDetails?) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "Informations biographiques",
+                text = stringResource(R.string.card_detail_bio_info),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            InfoLine("Naissance", listOfNotNull(biography?.birthDate, biography?.birthPlace).joinToString(" - "))
-            InfoLine("Mort", listOfNotNull(biography?.deathDate, biography?.deathPlace).joinToString(" - "))
-            InfoLine("Profession", biography?.occupation.orEmpty())
-            InfoLine("Wikidata", biography?.wikidataId.orEmpty())
-            InfoLine("Coordonnees", "${"%.5f".format(card.latitude)}, ${"%.5f".format(card.longitude)}")
+            InfoLine(stringResource(R.string.card_detail_birth), listOfNotNull(biography?.birthDate, biography?.birthPlace).joinToString(" - "))
+            InfoLine(stringResource(R.string.card_detail_death), listOfNotNull(biography?.deathDate, biography?.deathPlace).joinToString(" - "))
+            InfoLine(stringResource(R.string.card_detail_occupation), biography?.occupation.orEmpty())
+            InfoLine(stringResource(R.string.source_wikidata), biography?.wikidataId.orEmpty())
+            InfoLine(stringResource(R.string.card_detail_coordinates), "${"%.5f".format(card.latitude)}, ${"%.5f".format(card.longitude)}")
         }
     }
 }
@@ -227,13 +229,13 @@ private fun SummaryCard(summary: String?) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "Resume",
+                text = stringResource(R.string.card_detail_summary),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = summary?.takeIf { it.isNotBlank() }
-                    ?: "Aucun resume Wikipedia disponible pour cette carte.",
+                    ?: stringResource(R.string.card_detail_no_summary),
                 style = MaterialTheme.typography.bodyLarge
             )
         }
@@ -245,38 +247,40 @@ private fun SourceCard(
     biography: BiographyDetails?,
     onSelectSource: (Pair<String, String>) -> Unit
 ) {
+    val wikidataLabel = stringResource(R.string.source_wikidata)
+    val wikipediaLabel = stringResource(R.string.source_wikipedia)
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Sources biographiques",
+                text = stringResource(R.string.card_detail_sources),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Les liens externes restent disponibles sans afficher de page HTML dans l'application.",
+                text = stringResource(R.string.card_detail_sources_help),
                 style = MaterialTheme.typography.bodyMedium
             )
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(
                     onClick = {
-                        biography?.wikidataUrl?.let { onSelectSource("Wikidata" to it) }
+                        biography?.wikidataUrl?.let { onSelectSource(wikidataLabel to it) }
                     },
                     enabled = biography?.wikidataUrl != null,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Wikidata")
+                    Text(stringResource(R.string.source_wikidata))
                 }
                 Button(
                     onClick = {
-                        biography?.wikipediaUrl?.let { onSelectSource("Wikipedia" to it) }
+                        biography?.wikipediaUrl?.let { onSelectSource(wikipediaLabel to it) }
                     },
                     enabled = biography?.wikipediaUrl != null,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Wikipedia")
+                    Text(stringResource(R.string.source_wikipedia))
                 }
             }
         }
@@ -288,7 +292,7 @@ private fun InfoLine(label: String, value: String) {
     Column {
         Text(label, style = MaterialTheme.typography.labelLarge, color = Color(0xFF5B6472))
         Text(
-            text = value.takeIf { it.isNotBlank() } ?: "Information indisponible",
+            text = value.takeIf { it.isNotBlank() } ?: stringResource(R.string.card_detail_unavailable_info),
             style = MaterialTheme.typography.bodyLarge
         )
     }

@@ -6,6 +6,7 @@ import android.location.Location
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.geopeople.R
 import com.example.geopeople.data.ApiService
 import com.example.geopeople.data.CardRepository
 import com.example.geopeople.data.CaptureManager
@@ -44,7 +45,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _playerScore = MutableStateFlow(0)
     val playerScore: StateFlow<Int> = _playerScore.asStateFlow()
 
-    private val _playerName = MutableStateFlow("Joueur")
+    private val _playerName = MutableStateFlow(application.getString(R.string.player_default_name))
     val playerName: StateFlow<String> = _playerName.asStateFlow()
 
     private val _currentPlayerId = MutableStateFlow<String?>(null)
@@ -69,6 +70,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("geopeople", Context.MODE_PRIVATE)
 
     init {
+        ApiService.initialize(application)
+
         // Restore player ID from prefs
         playerId = prefs.getString("playerId", null)
         _currentPlayerId.value = playerId
@@ -94,7 +97,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     _isConnected.value = false
                     _needsPlayerName.value = true
                     if (!serverConnectionPopupDismissed) {
-                        _serverConnectionMessage.value = "Impossible de retrouver ce joueur sur le serveur. Entre ton nom pour continuer."
+                        _serverConnectionMessage.value = getApplication<Application>().getString(R.string.restore_player_failed)
                     }
                 }
             }
@@ -125,7 +128,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         _isConnected.value = false
                         if (!serverConnectionPopupDismissed) {
                             _serverConnectionMessage.value = backendResponse.message.ifBlank {
-                                "Connexion au serveur impossible. Nouvelle tentative en cours..."
+                                getApplication<Application>().getString(R.string.backend_reconnect_retry)
                             }
                         }
                         Log.w(TAG, "Backend unavailable: ${backendResponse.message}")
@@ -211,7 +214,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 val id = playerId
                 if (id == null) {
-                    _captureMessage.value = "Joueur non connecte au backend"
+                    _captureMessage.value = getApplication<Application>().getString(R.string.player_not_connected)
                     return@launch
                 }
 
@@ -228,7 +231,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         refreshLeaderboard()
                     }
                 } else {
-                    _captureMessage.value = result.message.ifBlank { "Capture refusee par le backend" }
+                    _captureMessage.value = result.message.ifBlank {
+                        getApplication<Application>().getString(R.string.capture_denied_backend)
+                    }
                 }
             }
         }
@@ -258,11 +263,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun createNewPlayer(name: String) {
-        val cleanName = name.trim().ifBlank { "Joueur_${System.currentTimeMillis() % 10000}" }
+        val cleanName = name.trim().ifBlank {
+            getApplication<Application>().getString(R.string.player_generated_name, System.currentTimeMillis() % 10000)
+        }
         viewModelScope.launch {
             val player = ApiService.registerPlayer(cleanName)
             if (player == null) {
-                _serverConnectionMessage.value = "Impossible de creer un nouveau joueur."
+                _serverConnectionMessage.value = getApplication<Application>().getString(R.string.create_player_failed)
                 return@launch
             }
 
@@ -292,7 +299,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         playerId = null
         prefs.edit().remove("playerId").apply()
         _currentPlayerId.value = null
-        _playerName.value = "Joueur"
+        _playerName.value = getApplication<Application>().getString(R.string.player_default_name)
         _playerScore.value = 0
         _isConnected.value = false
         _needsPlayerName.value = true

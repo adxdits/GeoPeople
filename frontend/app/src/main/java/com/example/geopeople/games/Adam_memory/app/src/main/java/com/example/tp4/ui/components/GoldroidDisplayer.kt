@@ -13,7 +13,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import com.example.geopeople.R
 
 @Composable
 fun GoldroidDisplayer(modifier: Modifier = Modifier) {
@@ -30,7 +32,7 @@ fun GoldroidDisplayer(modifier: Modifier = Modifier) {
     if (bitmap != null) {
         Image(
             bitmap = bitmap.asImageBitmap(),
-            contentDescription = "Goldroid",
+            contentDescription = stringResource(R.string.memory_goldroid),
             modifier = modifier,
             contentScale = ContentScale.Fit
         )
@@ -39,7 +41,7 @@ fun GoldroidDisplayer(modifier: Modifier = Modifier) {
             modifier = modifier.background(Color(0xFFFFD700)),
             contentAlignment = Alignment.Center
         ) {
-            Text("\uD83D\uDC20 GOLDROID", fontSize = 32.sp, color = Color.White)
+            Text(stringResource(R.string.memory_goldroid), fontSize = 32.sp, color = Color.White)
         }
     }
 }

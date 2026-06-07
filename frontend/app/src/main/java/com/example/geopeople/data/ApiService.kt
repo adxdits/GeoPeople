@@ -1,6 +1,8 @@
 package com.example.geopeople.data
 
+import android.content.Context
 import android.util.Log
+import com.example.geopeople.R
 import com.example.geopeople.model.GeoCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,6 +25,16 @@ object ApiService {
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
+
+    private var appContext: Context? = null
+
+    fun initialize(context: Context) {
+        appContext = context.applicationContext
+    }
+
+    private fun localizedString(id: Int, vararg args: Any): String {
+        return appContext?.getString(id, *args).orEmpty()
+    }
 
     // --- Player endpoints ---
 
@@ -165,7 +177,7 @@ object ApiService {
                     return@withContext CardsResponse(
                         success = false,
                         cards = emptyList(),
-                        message = "Réponse serveur vide"
+                        message = localizedString(R.string.backend_empty_response)
                     )
                 }
                 if (!response.isSuccessful) {
@@ -173,7 +185,7 @@ object ApiService {
                     return@withContext CardsResponse(
                         success = false,
                         cards = emptyList(),
-                        message = "Serveur indisponible (${response.code})"
+                        message = localizedString(R.string.backend_unavailable_with_code, response.code)
                     )
                 }
                 val cards = parseCardsArray(JSONArray(json))
@@ -188,7 +200,7 @@ object ApiService {
                 CardsResponse(
                     success = false,
                     cards = emptyList(),
-                    message = "Connexion au serveur impossible"
+                    message = localizedString(R.string.backend_reconnect_retry)
                 )
             }
         }
@@ -215,7 +227,7 @@ object ApiService {
                 .post(body)
                 .build()
             val response = client.newCall(request).execute()
-            val json = response.body?.string() ?: return@withContext CaptureResponse(false, "Erreur réseau")
+            val json = response.body?.string() ?: return@withContext CaptureResponse(false, localizedString(R.string.network_error))
             val obj = JSONObject(json)
             CaptureResponse(
                 success = obj.optBoolean("success", false),
@@ -223,7 +235,7 @@ object ApiService {
             )
         } catch (e: Exception) {
             e.printStackTrace()
-            CaptureResponse(false, "Erreur réseau: ${e.message}")
+            CaptureResponse(false, localizedString(R.string.network_error_with_detail, e.message.orEmpty()))
         }
     }
 

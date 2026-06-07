@@ -1,16 +1,17 @@
 package tp4.uge.snake
 
 import androidx.compose.ui.graphics.Color
+import com.example.geopeople.R
 import kotlin.random.Random
 
 const val GRID_SIZE = 15
 
 enum class Direction { UP, DOWN, LEFT, RIGHT }
 
-enum class Speed(val label: String, val delayMs: Long, val color: Color) {
-    SLOW  ("LENT",   300L, Color(0xFF4FC3F7)),
-    MEDIUM("MOYEN",  200L, Color(0xFFFFB74D)),
-    FAST  ("RAPIDE", 120L, Color(0xFFFF5252));
+enum class Speed(val labelRes: Int, val delayMs: Long, val color: Color) {
+    SLOW  (R.string.snake_speed_slow,   300L, Color(0xFF4FC3F7)),
+    MEDIUM(R.string.snake_speed_medium,  200L, Color(0xFFFFB74D)),
+    FAST  (R.string.snake_speed_fast, 120L, Color(0xFFFF5252));
 
     companion object {
         fun random(): Speed = entries.random()
