@@ -97,6 +97,16 @@
     <string name="nav_inventory">Inventaire</string>
     <string name="nav_profile">Profil</string>
     <string name="profile_change_player">Changer de joueur</string>
+    <string name="profile_personal_stats">Statistiques personnelles</string>
+    <string name="profile_stat_cards">Cartes</string>
+    <string name="profile_stat_score">Score</string>
+    <string name="profile_stat_total_power">Puissance totale</string>
+    <string name="profile_stat_trades">Echanges</string>
+    <string name="profile_stat_best_card">Meilleure carte</string>
+    <string name="profile_stat_latest_card">Derniere carte</string>
+    <string name="profile_stat_pending_trades">Demandes en attente</string>
+    <string name="profile_stat_pending_trades_value">%1$d recues / %2$d envoyees</string>
+    <string name="profile_stat_empty">Aucune</string>
     <string name="welcome_title">Bienvenue</string>
     <string name="welcome_subtitle">Choisis ton nom de joueur.</string>
     <string name="player_name_label">Nom</string>

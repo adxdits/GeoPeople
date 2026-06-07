@@ -348,6 +348,15 @@ private fun ProfileScreen(
     var showTradeDialog by remember { mutableStateOf(false) }
     val tradePlayers = players.filter { it.id != currentPlayerId && it.cardCount > 0 }
     val pendingTrades = trades.filter { it.status == "pending" }
+    val acceptedTrades = trades.filter { it.status == "accepted" }
+    val incomingPendingTrades = pendingTrades.count { it.toPlayerId == currentPlayerId }
+    val outgoingPendingTrades = pendingTrades.count { it.fromPlayerId == currentPlayerId }
+    val totalPower = inventory.sumOf { it.power }
+    val strongestCard = inventory.maxByOrNull { it.power }
+    val latestCapturedCard = inventory
+        .filter { it.capturedAt != null }
+        .maxByOrNull { it.capturedAt.orEmpty() }
+        ?: inventory.lastOrNull()
 
     Box(
         modifier = Modifier
@@ -383,6 +392,56 @@ private fun ProfileScreen(
                     text = "${inventory.size} carte(s)",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFFB7C2CD)
+                )
+            }
+
+            ProfileTile {
+                Text(
+                    text = stringResource(R.string.profile_personal_stats),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatBox(
+                        label = stringResource(R.string.profile_stat_cards),
+                        value = inventory.size.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatBox(
+                        label = stringResource(R.string.profile_stat_score),
+                        value = playerScore.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatBox(
+                        label = stringResource(R.string.profile_stat_total_power),
+                        value = totalPower.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatBox(
+                        label = stringResource(R.string.profile_stat_trades),
+                        value = acceptedTrades.size.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                InfoStatLine(
+                    label = stringResource(R.string.profile_stat_best_card),
+                    value = strongestCard?.let { "${it.name} (${it.power})" }
+                        ?: stringResource(R.string.profile_stat_empty)
+                )
+                InfoStatLine(
+                    label = stringResource(R.string.profile_stat_latest_card),
+                    value = latestCapturedCard?.name ?: stringResource(R.string.profile_stat_empty)
+                )
+                InfoStatLine(
+                    label = stringResource(R.string.profile_stat_pending_trades),
+                    value = stringResource(
+                        R.string.profile_stat_pending_trades_value,
+                        incomingPendingTrades,
+                        outgoingPendingTrades
+                    )
                 )
             }
 
@@ -477,6 +536,67 @@ private fun ProfileScreen(
                 onClearTargetInventory()
             }
         )
+    }
+}
+
+@Composable
+private fun StatBox(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF202B38),
+        border = BorderStroke(1.dp, Color(0xFF334253))
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFFFFCB05)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFFB7C2CD)
+            )
+        }
+    }
+}
+
+@Composable
+private fun InfoStatLine(label: String, value: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF202B38),
+        border = BorderStroke(1.dp, Color(0xFF334253))
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFFB7C2CD),
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
