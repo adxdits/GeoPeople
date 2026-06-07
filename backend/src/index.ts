@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import cardsRoutes from "./routes/cardsRoutes";
 import playerRoutes from "./routes/playerRoutes";
 import captureRoutes from "./routes/captureRoutes";
+import tradeRoutes from "./routes/tradeRoutes";
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 app.use("/api/cards", cardsRoutes);
 app.use("/api/players", playerRoutes);
 app.use("/api/captures", captureRoutes);
+app.use("/api/trades", tradeRoutes);
 
 const PORT = process.env.PORT || 3000;
 
