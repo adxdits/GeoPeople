@@ -122,6 +122,7 @@ The backend test suite currently covers the scoring service.
 - Capture validation through the backend
 - Inventory persistence through player restoration
 - Score calculation with collection bonuses based on initials, place, relation, and first-letter groups
+- Leaderboard ranking based on total score
 
 ## Current Repository Layout
 
