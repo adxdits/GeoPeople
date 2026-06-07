@@ -5,9 +5,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -105,6 +108,8 @@ fun AppNavigation(viewModel: GameViewModel) {
                     onProfileClick = {
                         selectedDetailCard = null
                         viewModel.selectCard(null)
+                        viewModel.refreshLeaderboard()
+                        viewModel.refreshTrades()
                         selectedTab = MainTab.Profile
                     }
                 )
@@ -180,6 +185,9 @@ private fun MainTabsScreen(
     val playerName by viewModel.playerName.collectAsState()
     val playerScore by viewModel.playerScore.collectAsState()
     val leaderboard by viewModel.leaderboard.collectAsState()
+    val tradeTargetInventory by viewModel.tradeTargetInventory.collectAsState()
+    val tradeMessage by viewModel.tradeMessage.collectAsState()
+    val trades by viewModel.trades.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
         GameScreen(
@@ -213,9 +221,35 @@ private fun MainTabsScreen(
 
         if (selectedTab == MainTab.Profile) {
             ProfileScreen(
+                currentPlayerId = currentPlayerId,
                 playerName = playerName,
                 playerScore = playerScore,
+                inventory = inventory,
+                players = leaderboard,
+                targetInventory = tradeTargetInventory,
+                trades = trades,
+                onLoadTargetInventory = { viewModel.loadTradeTargetInventory(it) },
+                onClearTargetInventory = { viewModel.clearTradeTargetInventory() },
+                onCreateTrade = { targetPlayerId, myCardId, targetCardId ->
+                    viewModel.createTradeProposal(targetPlayerId, myCardId, targetCardId)
+                },
+                onRefreshTrades = { viewModel.refreshTrades() },
+                onAcceptTrade = { viewModel.acceptTrade(it) },
+                onRejectTrade = { viewModel.rejectTrade(it) },
                 onLogout = onLogout
+            )
+        }
+
+        tradeMessage?.let { message ->
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissTradeMessage() },
+                title = { Text("Echange") },
+                text = { Text(message) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissTradeMessage() }) {
+                        Text(stringResource(R.string.action_ok))
+                    }
+                }
             )
         }
     }
@@ -296,27 +330,38 @@ private fun NavigationTab(
 
 @Composable
 private fun ProfileScreen(
+    currentPlayerId: String?,
     playerName: String,
     playerScore: Int,
+    inventory: List<GeoCard>,
+    players: List<com.example.geopeople.data.LeaderboardPlayerResponse>,
+    targetInventory: List<GeoCard>,
+    trades: List<com.example.geopeople.data.TradeProposalResponse>,
+    onLoadTargetInventory: (String) -> Unit,
+    onClearTargetInventory: () -> Unit,
+    onCreateTrade: (targetPlayerId: String, myCardId: String, targetCardId: String) -> Unit,
+    onRefreshTrades: () -> Unit,
+    onAcceptTrade: (String) -> Unit,
+    onRejectTrade: (String) -> Unit,
     onLogout: () -> Unit
 ) {
+    var showTradeDialog by remember { mutableStateOf(false) }
+    val tradePlayers = players.filter { it.id != currentPlayerId && it.cardCount > 0 }
+    val pendingTrades = trades.filter { it.status == "pending" }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0E1620))
-            .padding(20.dp),
-        contentAlignment = Alignment.Center
+            .padding(14.dp)
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            color = Color(0xFF17212B),
-            border = BorderStroke(1.dp, Color(0xFF334253))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
+            ProfileTile {
                 Text(
                     text = stringResource(R.string.nav_profile),
                     style = MaterialTheme.typography.headlineSmall,
@@ -334,6 +379,42 @@ private fun ProfileScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color(0xFFB7C2CD)
                 )
+                Text(
+                    text = "${inventory.size} carte(s)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFFB7C2CD)
+                )
+            }
+
+            ProfileTile {
+                Text(
+                    text = "Actions",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Button(
+                    onClick = {
+                        onClearTargetInventory()
+                        showTradeDialog = true
+                    },
+                    enabled = inventory.isNotEmpty() && tradePlayers.isNotEmpty(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Proposer un echange", fontWeight = FontWeight.Bold)
+                }
+                Button(
+                    onClick = onRefreshTrades,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Rafraichir les demandes")
+                }
                 Button(
                     onClick = onLogout,
                     modifier = Modifier
@@ -351,7 +432,225 @@ private fun ProfileScreen(
                     )
                 }
             }
+
+            ProfileTile {
+                Text(
+                    text = "Demandes d'echange",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                if (pendingTrades.isEmpty()) {
+                    Text(
+                        text = "Aucune demande en attente.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFB7C2CD)
+                    )
+                } else {
+                    pendingTrades.forEach { trade ->
+                        TradeRequestRow(
+                            trade = trade,
+                            currentPlayerId = currentPlayerId,
+                            players = players,
+                            inventory = inventory,
+                            onAcceptTrade = onAcceptTrade,
+                            onRejectTrade = onRejectTrade
+                        )
+                    }
+                }
+            }
         }
+    }
+
+    if (showTradeDialog) {
+        TradeDialog(
+            currentInventory = inventory,
+            players = tradePlayers,
+            targetInventory = targetInventory,
+            onLoadTargetInventory = onLoadTargetInventory,
+            onExchange = { targetPlayerId, myCardId, targetCardId ->
+                showTradeDialog = false
+                onCreateTrade(targetPlayerId, myCardId, targetCardId)
+            },
+            onDismiss = {
+                showTradeDialog = false
+                onClearTargetInventory()
+            }
+        )
+    }
+}
+
+@Composable
+private fun ProfileTile(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF17212B),
+        border = BorderStroke(1.dp, Color(0xFF334253))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            content = content
+        )
+    }
+}
+
+@Composable
+private fun TradeRequestRow(
+    trade: com.example.geopeople.data.TradeProposalResponse,
+    currentPlayerId: String?,
+    players: List<com.example.geopeople.data.LeaderboardPlayerResponse>,
+    inventory: List<GeoCard>,
+    onAcceptTrade: (String) -> Unit,
+    onRejectTrade: (String) -> Unit
+) {
+    val incoming = trade.toPlayerId == currentPlayerId
+    val otherPlayerId = if (incoming) trade.fromPlayerId else trade.toPlayerId
+    val otherName = players.firstOrNull { it.id == otherPlayerId }?.name ?: "Joueur"
+    val myCardId = if (incoming) trade.toCardId else trade.fromCardId
+    val otherCardId = if (incoming) trade.fromCardId else trade.toCardId
+    val myCard = inventory.firstOrNull { it.id == myCardId }?.name ?: "Carte"
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF202B38),
+        border = BorderStroke(1.dp, Color(0xFF334253))
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = if (incoming) "De $otherName" else "Envoyee a $otherName",
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Ta carte: $myCard",
+                color = Color(0xFFB7C2CD),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Carte proposee: $otherCardId",
+                color = Color(0xFFB7C2CD),
+                style = MaterialTheme.typography.bodySmall
+            )
+            if (incoming) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { onAcceptTrade(trade.id) }, modifier = Modifier.weight(1f)) {
+                        Text("Accepter")
+                    }
+                    OutlinedButton(onClick = { onRejectTrade(trade.id) }, modifier = Modifier.weight(1f)) {
+                        Text("Refuser")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TradeDialog(
+    currentInventory: List<GeoCard>,
+    players: List<com.example.geopeople.data.LeaderboardPlayerResponse>,
+    targetInventory: List<GeoCard>,
+    onLoadTargetInventory: (String) -> Unit,
+    onExchange: (targetPlayerId: String, myCardId: String, targetCardId: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedPlayerId by remember { mutableStateOf<String?>(null) }
+    var selectedMyCardId by remember { mutableStateOf<String?>(null) }
+    var selectedTargetCardId by remember { mutableStateOf<String?>(null) }
+    val selectedPlayer = players.firstOrNull { it.id == selectedPlayerId }
+    val canExchange = selectedPlayerId != null && selectedMyCardId != null && selectedTargetCardId != null
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Echange 1 carte contre 1 carte") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Joueur")
+                players.forEach { player ->
+                    Button(
+                        onClick = {
+                            selectedPlayerId = player.id
+                            selectedTargetCardId = null
+                            onLoadTargetInventory(player.id)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (selectedPlayerId == player.id) Color(0xFFFFCB05) else Color(0xFF253342),
+                            contentColor = if (selectedPlayerId == player.id) Color(0xFF17212B) else Color.White
+                        )
+                    ) {
+                        Text("${player.name} - ${player.cardCount} carte(s)")
+                    }
+                }
+
+                Text("Ta carte")
+                currentInventory.take(5).forEach { card ->
+                    TradeChoiceButton(
+                        text = "${card.name} (${card.power})",
+                        selected = selectedMyCardId == card.id,
+                        onClick = { selectedMyCardId = card.id }
+                    )
+                }
+
+                Text(selectedPlayer?.let { "Carte de ${it.name}" } ?: "Carte de l'autre joueur")
+                if (selectedPlayerId == null) {
+                    Text("Choisis d'abord un joueur.")
+                } else if (targetInventory.isEmpty()) {
+                    Text("Aucune carte disponible.")
+                } else {
+                    targetInventory.take(5).forEach { card ->
+                        TradeChoiceButton(
+                            text = "${card.name} (${card.power})",
+                            selected = selectedTargetCardId == card.id,
+                            onClick = { selectedTargetCardId = card.id }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = canExchange,
+                onClick = {
+                    onExchange(
+                        selectedPlayerId.orEmpty(),
+                        selectedMyCardId.orEmpty(),
+                        selectedTargetCardId.orEmpty()
+                    )
+                }
+            ) {
+                Text("Echanger")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annuler")
+            }
+        }
+    )
+}
+
+@Composable
+private fun TradeChoiceButton(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (selected) Color(0xFFFFCB05) else Color(0xFF253342),
+            contentColor = if (selected) Color(0xFF17212B) else Color.White
+        )
+    ) {
+        Text(text)
     }
 }
 

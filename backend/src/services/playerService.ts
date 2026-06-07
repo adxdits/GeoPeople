@@ -91,6 +91,66 @@ export function getPlayerInventoryCards(playerId: string): Card[] {
     .filter((card): card is Card => card !== undefined);
 }
 
+export function exchangeCards(
+  playerAId: string,
+  playerBId: string,
+  cardAId: string,
+  cardBId: string
+): { success: boolean; message: string; players?: { playerA: Player; playerB: Player } } {
+  if (playerAId === playerBId) {
+    return { success: false, message: "Impossible d'echanger avec soi-meme" };
+  }
+  if (cardAId === cardBId) {
+    return { success: false, message: "Choisissez deux cartes differentes" };
+  }
+
+  const playerA = players.get(playerAId);
+  const playerB = players.get(playerBId);
+  if (!playerA || !playerB) {
+    return { success: false, message: "Joueur introuvable" };
+  }
+
+  const cardA = getCardById(cardAId);
+  const cardB = getCardById(cardBId);
+  if (!cardA || !cardB) {
+    return { success: false, message: "Carte introuvable" };
+  }
+
+  if (!playerA.inventory.includes(cardAId)) {
+    return { success: false, message: `${playerA.name} ne possede pas cette carte` };
+  }
+  if (!playerB.inventory.includes(cardBId)) {
+    return { success: false, message: `${playerB.name} ne possede pas cette carte` };
+  }
+  if (playerA.inventory.includes(cardBId) || playerB.inventory.includes(cardAId)) {
+    return { success: false, message: "L'echange creerait un doublon dans un inventaire" };
+  }
+
+  playerA.inventory = playerA.inventory.filter((cardId) => cardId !== cardAId);
+  playerB.inventory = playerB.inventory.filter((cardId) => cardId !== cardBId);
+  playerA.inventory.push(cardBId);
+  playerB.inventory.push(cardAId);
+  playerA.score = calculateInventoryScore(playerA.inventory);
+  playerB.score = calculateInventoryScore(playerB.inventory);
+
+  cardA.history.push({
+    playerId: playerBId,
+    action: "exchange",
+    date: new Date().toISOString()
+  });
+  cardB.history.push({
+    playerId: playerAId,
+    action: "exchange",
+    date: new Date().toISOString()
+  });
+
+  return {
+    success: true,
+    message: "Echange effectue",
+    players: { playerA, playerB }
+  };
+}
+
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;

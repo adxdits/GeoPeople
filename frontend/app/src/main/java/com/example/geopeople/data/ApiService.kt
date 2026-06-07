@@ -259,6 +259,100 @@ object ApiService {
         }
     }
 
+    suspend fun createTradeProposal(
+        fromPlayerId: String,
+        toPlayerId: String,
+        fromCardId: String,
+        toCardId: String
+    ): TradeResponse = withContext(Dispatchers.IO) {
+        try {
+            val body = JSONObject()
+                .put("fromPlayerId", fromPlayerId)
+                .put("toPlayerId", toPlayerId)
+                .put("fromCardId", fromCardId)
+                .put("toCardId", toCardId)
+                .toString()
+                .toRequestBody(JSON_MEDIA)
+            val request = Request.Builder()
+                .url("$BASE_URL/trades")
+                .post(body)
+                .build()
+            Log.d(TAG, "POST ${request.url}")
+            val response = client.newCall(request).execute()
+            val json = response.body?.string() ?: return@withContext TradeResponse(
+                success = false,
+                message = localizedString(R.string.network_error)
+            )
+            val obj = JSONObject(json)
+            TradeResponse(
+                success = obj.optBoolean("success", false),
+                message = obj.optString("message", "")
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "createTradeProposal failed", e)
+            e.printStackTrace()
+            TradeResponse(false, localizedString(R.string.network_error_with_detail, e.message.orEmpty()))
+        }
+    }
+
+    suspend fun getPlayerTrades(playerId: String): List<TradeProposalResponse> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$BASE_URL/trades/player/$playerId")
+                .get()
+                .build()
+            val response = client.newCall(request).execute()
+            val json = response.body?.string() ?: return@withContext emptyList()
+            if (!response.isSuccessful) return@withContext emptyList()
+
+            val arr = JSONArray(json)
+            val trades = mutableListOf<TradeProposalResponse>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                trades.add(parseTradeProposal(obj))
+            }
+            trades
+        } catch (e: Exception) {
+            Log.e(TAG, "getPlayerTrades failed", e)
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun acceptTrade(tradeId: String, playerId: String): TradeResponse =
+        resolveTrade(tradeId, playerId, "accept")
+
+    suspend fun rejectTrade(tradeId: String, playerId: String): TradeResponse =
+        resolveTrade(tradeId, playerId, "reject")
+
+    private suspend fun resolveTrade(tradeId: String, playerId: String, action: String): TradeResponse =
+        withContext(Dispatchers.IO) {
+            try {
+                val body = JSONObject()
+                    .put("playerId", playerId)
+                    .toString()
+                    .toRequestBody(JSON_MEDIA)
+                val request = Request.Builder()
+                    .url("$BASE_URL/trades/$tradeId/$action")
+                    .put(body)
+                    .build()
+                val response = client.newCall(request).execute()
+                val json = response.body?.string() ?: return@withContext TradeResponse(
+                    success = false,
+                    message = localizedString(R.string.network_error)
+                )
+                val obj = JSONObject(json)
+                TradeResponse(
+                    success = obj.optBoolean("success", false),
+                    message = obj.optString("message", "")
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "resolveTrade failed", e)
+                e.printStackTrace()
+                TradeResponse(false, localizedString(R.string.network_error_with_detail, e.message.orEmpty()))
+            }
+        }
+
     // --- Parsers ---
 
     private fun parsePlayerResponse(json: JSONObject): PlayerResponse {
@@ -296,6 +390,18 @@ object ApiService {
         return cards
     }
 
+    private fun parseTradeProposal(obj: JSONObject): TradeProposalResponse {
+        return TradeProposalResponse(
+            id = obj.getString("id"),
+            fromPlayerId = obj.getString("fromPlayerId"),
+            toPlayerId = obj.getString("toPlayerId"),
+            fromCardId = obj.getString("fromCardId"),
+            toCardId = obj.getString("toCardId"),
+            status = obj.optString("status", "pending"),
+            createdAt = obj.optString("createdAt", "")
+        )
+    }
+
     private fun parseStringArray(arr: JSONArray?): List<String> {
         if (arr == null) return emptyList()
         val list = mutableListOf<String>()
@@ -325,6 +431,21 @@ data class LeaderboardPlayerResponse(
 data class CaptureResponse(
     val success: Boolean,
     val message: String
+)
+
+data class TradeResponse(
+    val success: Boolean,
+    val message: String
+)
+
+data class TradeProposalResponse(
+    val id: String,
+    val fromPlayerId: String,
+    val toPlayerId: String,
+    val fromCardId: String,
+    val toCardId: String,
+    val status: String,
+    val createdAt: String
 )
 
 data class CardsResponse(

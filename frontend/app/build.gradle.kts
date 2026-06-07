@@ -61,6 +61,8 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     exclude("**/games/Adam_memory/app/src/androidTest/**")
     exclude("**/games/Ihssan_ballrun/app/src/test/**")
     exclude("**/games/Ihssan_ballrun/app/src/androidTest/**")
+    exclude("**/games/Ihssane_ballrun/app/src/test/**")
+    exclude("**/games/Ihssane_ballrun/app/src/androidTest/**")
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -70,6 +72,8 @@ tasks.withType<JavaCompile>().configureEach {
     exclude("**/games/Adam_memory/app/src/androidTest/**")
     exclude("**/games/Ihssan_ballrun/app/src/test/**")
     exclude("**/games/Ihssan_ballrun/app/src/androidTest/**")
+    exclude("**/games/Ihssane_ballrun/app/src/test/**")
+    exclude("**/games/Ihssane_ballrun/app/src/androidTest/**")
 }
 
 dependencies {

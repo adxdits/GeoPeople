@@ -11,6 +11,7 @@ import com.example.geopeople.data.ApiService
 import com.example.geopeople.data.CardRepository
 import com.example.geopeople.data.CaptureManager
 import com.example.geopeople.data.LeaderboardPlayerResponse
+import com.example.geopeople.data.TradeProposalResponse
 import com.example.geopeople.location.DistanceUtils
 import com.example.geopeople.location.LocationService
 import com.example.geopeople.model.GeoCard
@@ -56,6 +57,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _leaderboard = MutableStateFlow<List<LeaderboardPlayerResponse>>(emptyList())
     val leaderboard: StateFlow<List<LeaderboardPlayerResponse>> = _leaderboard.asStateFlow()
+
+    private val _tradeTargetInventory = MutableStateFlow<List<GeoCard>>(emptyList())
+    val tradeTargetInventory: StateFlow<List<GeoCard>> = _tradeTargetInventory.asStateFlow()
+
+    private val _tradeMessage = MutableStateFlow<String?>(null)
+    val tradeMessage: StateFlow<String?> = _tradeMessage.asStateFlow()
+
+    private val _trades = MutableStateFlow<List<TradeProposalResponse>>(emptyList())
+    val trades: StateFlow<List<TradeProposalResponse>> = _trades.asStateFlow()
 
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
@@ -260,6 +270,84 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _leaderboard.value = ApiService.getLeaderboard()
         }
+    }
+
+    fun refreshTrades() {
+        val id = playerId ?: return
+        viewModelScope.launch {
+            _trades.value = ApiService.getPlayerTrades(id)
+        }
+    }
+
+    fun loadTradeTargetInventory(targetPlayerId: String) {
+        viewModelScope.launch {
+            _tradeTargetInventory.value = ApiService.getPlayerInventoryCards(targetPlayerId)
+        }
+    }
+
+    fun clearTradeTargetInventory() {
+        _tradeTargetInventory.value = emptyList()
+    }
+
+    fun dismissTradeMessage() {
+        _tradeMessage.value = null
+    }
+
+    fun createTradeProposal(targetPlayerId: String, myCardId: String, targetCardId: String) {
+        val id = playerId
+        if (id == null) {
+            _tradeMessage.value = getApplication<Application>().getString(R.string.player_not_connected)
+            return
+        }
+
+        viewModelScope.launch {
+            val result = ApiService.createTradeProposal(
+                fromPlayerId = id,
+                toPlayerId = targetPlayerId,
+                fromCardId = myCardId,
+                toCardId = targetCardId
+            )
+            _tradeMessage.value = result.message.ifBlank {
+                if (result.success) "Proposition envoyee" else "Proposition refusee"
+            }
+
+            if (result.success) {
+                refreshTrades()
+            }
+        }
+    }
+
+    fun acceptTrade(tradeId: String) {
+        val id = playerId ?: return
+        viewModelScope.launch {
+            val result = ApiService.acceptTrade(tradeId, id)
+            _tradeMessage.value = result.message.ifBlank {
+                if (result.success) "Echange accepte" else "Echange refuse"
+            }
+            refreshAfterTradeResolution(id)
+        }
+    }
+
+    fun rejectTrade(tradeId: String) {
+        val id = playerId ?: return
+        viewModelScope.launch {
+            val result = ApiService.rejectTrade(tradeId, id)
+            _tradeMessage.value = result.message.ifBlank {
+                if (result.success) "Echange refuse" else "Action impossible"
+            }
+            refreshTrades()
+        }
+    }
+
+    private suspend fun refreshAfterTradeResolution(id: String) {
+        val player = ApiService.getPlayer(id)
+        if (player != null) {
+            _playerScore.value = player.score
+            _playerName.value = player.name
+        }
+        restoreInventoryFromServer(id)
+        refreshLeaderboard()
+        refreshTrades()
     }
 
     fun createNewPlayer(name: String) {
