@@ -16,6 +16,46 @@ export type TradeProposal = {
 };
 
 const trades: TradeProposal[] = [];
+const MAX_TRADE_DISTANCE_METERS = 100;
+
+function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function validatePlayersAreClose(
+  fromPlayer: NonNullable<ReturnType<typeof getPlayer>>,
+  toPlayer: NonNullable<ReturnType<typeof getPlayer>>
+): { success: true } | { success: false; message: string } {
+  const hasFromLocation = fromPlayer.latitude !== 0 || fromPlayer.longitude !== 0;
+  const hasToLocation = toPlayer.latitude !== 0 || toPlayer.longitude !== 0;
+  if (!hasFromLocation || !hasToLocation) {
+    return {
+      success: false,
+      message: "Position des deux joueurs requise pour echanger"
+    };
+  }
+
+  const distance = haversineMeters(
+    fromPlayer.latitude,
+    fromPlayer.longitude,
+    toPlayer.latitude,
+    toPlayer.longitude
+  );
+  if (distance > MAX_TRADE_DISTANCE_METERS) {
+    return {
+      success: false,
+      message: `Joueurs trop eloignes pour echanger (${Math.round(distance)}m, max ${MAX_TRADE_DISTANCE_METERS}m)`
+    };
+  }
+
+  return { success: true };
+}
 
 export function createTradeProposal(
   fromPlayerId: string,
@@ -31,6 +71,10 @@ export function createTradeProposal(
   const toPlayer = getPlayer(toPlayerId);
   if (!fromPlayer || !toPlayer) {
     return { success: false, message: "Joueur introuvable" };
+  }
+  const proximity = validatePlayersAreClose(fromPlayer, toPlayer);
+  if (!proximity.success) {
+    return proximity;
   }
 
   const fromCard = getCardById(fromCardId);
@@ -94,6 +138,16 @@ export function acceptTrade(
   }
   if (trade.toPlayerId !== playerId) {
     return { success: false, message: "Seul le destinataire peut accepter l'echange" };
+  }
+
+  const fromPlayer = getPlayer(trade.fromPlayerId);
+  const toPlayer = getPlayer(trade.toPlayerId);
+  if (!fromPlayer || !toPlayer) {
+    return { success: false, message: "Joueur introuvable" };
+  }
+  const proximity = validatePlayersAreClose(fromPlayer, toPlayer);
+  if (!proximity.success) {
+    return proximity;
   }
 
   const result = exchangeCards(
