@@ -74,6 +74,10 @@ object ApiService {
                 return@withContext null
             }
             Log.d(TAG, "getPlayer: status=${response.code}")
+            if (!response.isSuccessful) {
+                Log.w(TAG, "getPlayer: bad status=${response.code} body=$json")
+                return@withContext null
+            }
             parsePlayerResponse(JSONObject(json))
         } catch (e: Exception) {
             Log.e(TAG, "getPlayer failed for playerId=$playerId", e)
@@ -162,6 +166,38 @@ object ApiService {
 
     suspend fun getNearbyCards(lat: Double, lon: Double, radiusKm: Int = 20): List<GeoCard> =
         getNearbyCardsResult(lat, lon, radiusKm).cards
+
+    suspend fun getCardHistory(cardId: String): List<CardHistoryResponse> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$BASE_URL/cards/$cardId/history")
+                .get()
+                .build()
+            Log.d(TAG, "GET ${request.url}")
+            val response = client.newCall(request).execute()
+            val json = response.body?.string() ?: return@withContext emptyList()
+            if (!response.isSuccessful) return@withContext emptyList()
+
+            val arr = JSONArray(json)
+            val history = mutableListOf<CardHistoryResponse>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                history.add(
+                    CardHistoryResponse(
+                        playerId = obj.optString("playerId", ""),
+                        playerName = obj.optString("playerName", obj.optString("playerId", "")),
+                        action = obj.optString("action", ""),
+                        date = obj.optString("date", "")
+                    )
+                )
+            }
+            history
+        } catch (e: Exception) {
+            Log.e(TAG, "getCardHistory failed for cardId=$cardId", e)
+            e.printStackTrace()
+            emptyList()
+        }
+    }
 
     suspend fun getNearbyCardsResult(lat: Double, lon: Double, radiusKm: Int = 20): CardsResponse =
         withContext(Dispatchers.IO) {
@@ -446,6 +482,13 @@ data class TradeProposalResponse(
     val toCardId: String,
     val status: String,
     val createdAt: String
+)
+
+data class CardHistoryResponse(
+    val playerId: String,
+    val playerName: String,
+    val action: String,
+    val date: String
 )
 
 data class CardsResponse(

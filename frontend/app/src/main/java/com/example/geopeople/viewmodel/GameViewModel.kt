@@ -105,11 +105,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     refreshLeaderboard()
                 } else {
                     Log.w(TAG, "Could not restore playerId=$playerId")
+                    prefs.edit().remove("playerId").apply()
+                    playerId = null
+                    _currentPlayerId.value = null
                     _isConnected.value = false
                     _needsPlayerName.value = true
-                    if (!serverConnectionPopupDismissed) {
-                        _serverConnectionMessage.value = getApplication<Application>().getString(R.string.restore_player_failed)
-                    }
+                    _serverConnectionMessage.value = null
                 }
             }
         }

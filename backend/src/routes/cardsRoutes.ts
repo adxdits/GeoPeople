@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { getAllCards, getCardById, getCardsNearby } from "../services/cardsService";
+import { getPlayer } from "../services/playerService";
 
 const router = Router();
 
@@ -32,7 +33,15 @@ router.get("/:id/history", (req, res) => {
     return res.status(404).json({ error: "Card not found" });
   }
 
-  res.json(card.history);
+  res.json(
+    card.history.map((entry) => {
+      const player = getPlayer(entry.playerId);
+      return {
+        ...entry,
+        playerName: player?.name ?? entry.playerId
+      };
+    })
+  );
 });
 
 // GET /api/cards/:id

@@ -45,12 +45,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.geopeople.R
+import com.example.geopeople.data.ApiService
 import com.example.geopeople.data.BiographyDetails
 import com.example.geopeople.data.BiographyService
+import com.example.geopeople.data.CardHistoryResponse
 import com.example.geopeople.model.GeoCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun CardDetailScreen(
@@ -61,12 +66,20 @@ fun CardDetailScreen(
     val context = LocalContext.current
     var selectedSource by remember { mutableStateOf<Pair<String, String>?>(null) }
     var biography by remember(card.name) { mutableStateOf<BiographyDetails?>(null) }
+    var history by remember(card.id) { mutableStateOf<List<CardHistoryResponse>>(emptyList()) }
     var isLoading by remember(card.name) { mutableStateOf(true) }
+    var isHistoryLoading by remember(card.id) { mutableStateOf(true) }
 
     LaunchedEffect(card.name) {
         isLoading = true
         biography = BiographyService.fetchBiography(card.name)
         isLoading = false
+    }
+
+    LaunchedEffect(card.id) {
+        isHistoryLoading = true
+        history = ApiService.getCardHistory(card.id)
+        isHistoryLoading = false
     }
 
     fun openUrl(url: String) {
@@ -100,6 +113,10 @@ fun CardDetailScreen(
         } else {
             BiographyInfoCard(card = card, biography = biography)
             SummaryCard(summary = biography?.summary)
+            PossessionHistoryCard(
+                history = history,
+                isLoading = isHistoryLoading
+            )
             SourceCard(
                 biography = biography,
                 onSelectSource = { selectedSource = it }
@@ -134,6 +151,97 @@ fun CardDetailScreen(
             }
         )
     }
+}
+
+@Composable
+private fun PossessionHistoryCard(
+    history: List<CardHistoryResponse>,
+    isLoading: Boolean
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.card_detail_possession_history),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            when {
+                isLoading -> {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                        Text(stringResource(R.string.card_detail_history_loading))
+                    }
+                }
+                history.isEmpty() -> {
+                    Text(
+                        text = stringResource(R.string.card_detail_history_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF5B6472)
+                    )
+                }
+                else -> {
+                    history.forEachIndexed { index, entry ->
+                        HistoryLine(
+                            entry = entry,
+                            isFirst = index == 0
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryLine(entry: CardHistoryResponse, isFirst: Boolean) {
+    val actionText = when (entry.action) {
+        "capture" -> if (isFirst) {
+            stringResource(R.string.card_detail_history_first_capture)
+        } else {
+            stringResource(R.string.card_detail_history_capture)
+        }
+        "exchange" -> stringResource(R.string.card_detail_history_exchange)
+        "battle" -> stringResource(R.string.card_detail_history_battle)
+        else -> stringResource(R.string.card_detail_history_unknown)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFF3F6FF), RoundedCornerShape(8.dp))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = actionText,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = stringResource(R.string.card_detail_history_owner, entry.playerName),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Text(
+            text = formatHistoryDate(entry.date),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xFF5B6472)
+        )
+    }
+}
+
+private fun formatHistoryDate(rawDate: String): String {
+    return runCatching {
+        val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+            .withZone(ZoneId.systemDefault())
+        formatter.format(Instant.parse(rawDate))
+    }.getOrElse { rawDate.ifBlank { "-" } }
 }
 
 @Composable

@@ -73,6 +73,15 @@
     <string name="card_detail_coordinates">Coordonnees</string>
     <string name="card_detail_summary">Resume</string>
     <string name="card_detail_no_summary">Aucun resume Wikipedia disponible pour cette carte.</string>
+    <string name="card_detail_possession_history">Historique de possession</string>
+    <string name="card_detail_history_loading">Chargement de l\'historique...</string>
+    <string name="card_detail_history_empty">Aucun historique disponible pour cette carte.</string>
+    <string name="card_detail_history_first_capture">Primo-acquisition</string>
+    <string name="card_detail_history_capture">Capture</string>
+    <string name="card_detail_history_exchange">Echange</string>
+    <string name="card_detail_history_battle">Bataille</string>
+    <string name="card_detail_history_unknown">Operation</string>
+    <string name="card_detail_history_owner">Proprietaire : %1$s</string>
     <string name="card_detail_sources">Sources biographiques</string>
     <string name="card_detail_sources_help">Les liens externes restent disponibles sans afficher de page HTML dans l\'application.</string>
     <string name="card_detail_unavailable_info">Information indisponible</string>
