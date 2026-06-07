@@ -34,6 +34,8 @@ Thumbs.db
 
 # Large generated/data artifacts
 /backend/src/*.jsonl.zst
+/backend/data/*.jsonl
+/backend/data/*.jsonl.zst
 
 # Mini-game/project imports
 **/.git/

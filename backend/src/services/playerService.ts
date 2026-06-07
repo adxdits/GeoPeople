@@ -1,7 +1,7 @@
 import { Player } from "../models/player";
 import { Card } from "../models/card";
 import { v4 as uuidv4 } from "uuid";
-import { getCardById, getCardsNearby } from "./cardsService";
+import { getCardById } from "./cardsService";
 import { calculateInventoryScore } from "./scoringService";
 
 const players: Map<string, Player> = new Map();
@@ -81,10 +81,6 @@ export function getPlayerInventory(playerId: string): string[] {
 export function getPlayerInventoryCards(playerId: string): Card[] {
   const player = players.get(playerId);
   if (!player) return [];
-
-  if (player.latitude !== 0 || player.longitude !== 0) {
-    getCardsNearby(player.latitude, player.longitude, 1);
-  }
 
   return player.inventory
     .map((cardId) => getCardById(cardId))

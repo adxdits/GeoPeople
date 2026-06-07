@@ -11,7 +11,7 @@ router.get("/", (req: Request, res: Response) => {
 });
 
 // GET /api/cards/nearby?lat=X&lon=Y&radius=Z
-router.get("/nearby", (req: Request, res: Response) => {
+router.get("/nearby", async (req: Request, res: Response) => {
   const lat = parseFloat(req.query.lat as string);
   const lon = parseFloat(req.query.lon as string);
   const radius = parseFloat(req.query.radius as string) || 20;
@@ -21,9 +21,14 @@ router.get("/nearby", (req: Request, res: Response) => {
     res.status(400).json({ error: "Paramètres lat et lon requis" });
     return;
   }
-  const cards = getCardsNearby(lat, lon, radius);
-  console.log(`[cards/nearby] returning ${cards.length} cards`);
-  res.json(cards);
+  try {
+    const cards = await getCardsNearby(lat, lon, radius);
+    console.log(`[cards/nearby] returning ${cards.length} cards`);
+    res.json(cards);
+  } catch (error) {
+    console.error("[cards/nearby] failed", error);
+    res.status(500).json({ error: "Impossible de charger les cartes" });
+  }
 });
 
 router.get("/:id/history", (req, res) => {

@@ -100,6 +100,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     _isConnected.value = true
                     _playerName.value = player.name
                     _playerScore.value = player.score
+                    lastSyncLat = null
+                    lastSyncLon = null
+                    forceSyncCurrentLocation(player.id)
                     restoreInventoryFromServer(player.id)
                     Log.d(TAG, "Restored player id=${player.id} score=${player.score}")
                     refreshLeaderboard()
@@ -382,6 +385,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             playerId = player.id
             _currentPlayerId.value = player.id
             prefs.edit().putString("playerId", player.id).apply()
+            lastSyncLat = null
+            lastSyncLon = null
             captureManager.clear()
             _selectedCard.value = null
             _captureSuccess.value = false
@@ -390,9 +395,20 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _playerScore.value = player.score
             _isConnected.value = true
             _needsPlayerName.value = false
+            forceSyncCurrentLocation(player.id)
             restoreInventoryFromServer(player.id)
             refreshLeaderboard()
         }
+    }
+
+    private suspend fun forceSyncCurrentLocation(id: String) {
+        val loc = playerLocation.value ?: return
+        val synced = ApiService.updatePlayerLocation(id, loc.latitude, loc.longitude)
+        if (synced) {
+            lastSyncLat = loc.latitude
+            lastSyncLon = loc.longitude
+        }
+        Log.d(TAG, "Forced location sync playerId=$id success=$synced")
     }
 
     private suspend fun restoreInventoryFromServer(id: String) {

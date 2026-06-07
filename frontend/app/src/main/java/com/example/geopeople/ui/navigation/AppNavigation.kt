@@ -189,6 +189,14 @@ private fun MainTabsScreen(
     val tradeMessage by viewModel.tradeMessage.collectAsState()
     val trades by viewModel.trades.collectAsState()
 
+    LaunchedEffect(selectedTab) {
+        while (selectedTab == MainTab.Profile) {
+            viewModel.refreshLeaderboard()
+            viewModel.refreshTrades()
+            kotlinx.coroutines.delay(5_000L)
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         GameScreen(
             viewModel = viewModel,
