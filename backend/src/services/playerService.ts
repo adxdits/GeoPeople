@@ -147,6 +147,94 @@ export function exchangeCards(
   };
 }
 
+export function battleCards(
+  playerAId: string,
+  playerBId: string,
+  cardAId: string,
+  cardBId: string
+): {
+  success: boolean;
+  message: string;
+  winnerId?: string;
+  loserId?: string;
+  winnerCardId?: string;
+  loserCardId?: string;
+  playerACardName?: string;
+  playerBCardName?: string;
+  playerACardPower?: number;
+  playerBCardPower?: number;
+  winnerCardName?: string;
+  loserCardName?: string;
+  winnerCardPower?: number;
+  loserCardPower?: number;
+} {
+  if (playerAId === playerBId) {
+    return { success: false, message: "Impossible de combattre contre soi-meme" };
+  }
+
+  const playerA = players.get(playerAId);
+  const playerB = players.get(playerBId);
+  if (!playerA || !playerB) {
+    return { success: false, message: "Joueur introuvable" };
+  }
+
+  const cardA = getCardById(cardAId);
+  const cardB = getCardById(cardBId);
+  if (!cardA || !cardB) {
+    return { success: false, message: "Carte introuvable" };
+  }
+
+  if (!playerA.inventory.includes(cardAId)) {
+    return { success: false, message: `${playerA.name} ne possede pas cette carte` };
+  }
+  if (!playerB.inventory.includes(cardBId)) {
+    return { success: false, message: `${playerB.name} ne possede pas cette carte` };
+  }
+
+  const totalPower = Math.max(1, cardA.power + cardB.power);
+  const playerAWins = Math.random() < cardA.power / totalPower;
+  const winner = playerAWins ? playerA : playerB;
+  const loser = playerAWins ? playerB : playerA;
+  const winnerCard = playerAWins ? cardA : cardB;
+  const loserCard = playerAWins ? cardB : cardA;
+
+  loser.inventory = loser.inventory.filter((cardId) => cardId !== loserCard.id);
+  if (!winner.inventory.includes(loserCard.id)) {
+    winner.inventory.push(loserCard.id);
+  }
+  winner.score = calculateInventoryScore(winner.inventory);
+  loser.score = calculateInventoryScore(loser.inventory);
+
+  const battleDate = new Date().toISOString();
+  winnerCard.history.push({
+    playerId: winner.id,
+    action: "battle",
+    date: battleDate
+  });
+  loserCard.history.push({
+    playerId: winner.id,
+    action: "battle",
+    date: battleDate
+  });
+
+  return {
+    success: true,
+    message: `${winner.name} gagne avec ${winnerCard.personName} (${winnerCard.power}) contre ${loserCard.personName} (${loserCard.power}) et remporte la carte adverse`,
+    winnerId: winner.id,
+    loserId: loser.id,
+    winnerCardId: winnerCard.id,
+    loserCardId: loserCard.id,
+    playerACardName: cardA.personName,
+    playerBCardName: cardB.personName,
+    playerACardPower: cardA.power,
+    playerBCardPower: cardB.power,
+    winnerCardName: winnerCard.personName,
+    loserCardName: loserCard.personName,
+    winnerCardPower: winnerCard.power,
+    loserCardPower: loserCard.power
+  };
+}
+
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;

@@ -18,7 +18,7 @@ object ApiService {
     private const val TAG = "GeoPeopleApi"
     // Android emulator: 10.0.2.2 points to the host machine running the backend.
     // For a real phone, replace it with the computer's local network IP address.
-    private const val BASE_URL = "http://10.0.2.2:3000/api"
+    private const val BASE_URL = "http://127.0.0.1:3000/api"
     private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
 
     private val client = OkHttpClient.Builder()
@@ -390,6 +390,103 @@ object ApiService {
             }
         }
 
+    suspend fun createBattleProposal(
+        fromPlayerId: String,
+        toPlayerId: String,
+        fromCardId: String
+    ): BattleResponse = withContext(Dispatchers.IO) {
+        try {
+            val body = JSONObject()
+                .put("fromPlayerId", fromPlayerId)
+                .put("toPlayerId", toPlayerId)
+                .put("fromCardId", fromCardId)
+                .toString()
+                .toRequestBody(JSON_MEDIA)
+            val request = Request.Builder()
+                .url("$BASE_URL/battles")
+                .post(body)
+                .build()
+            val response = client.newCall(request).execute()
+            val json = response.body?.string() ?: return@withContext BattleResponse(
+                success = false,
+                message = localizedString(R.string.network_error)
+            )
+            val obj = JSONObject(json)
+            BattleResponse(
+                success = obj.optBoolean("success", false),
+                message = obj.optString("message", "")
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "createBattleProposal failed", e)
+            e.printStackTrace()
+            BattleResponse(false, localizedString(R.string.network_error_with_detail, e.message.orEmpty()))
+        }
+    }
+
+    suspend fun getPlayerBattles(playerId: String): List<BattleProposalResponse> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$BASE_URL/battles/player/$playerId")
+                .get()
+                .build()
+            val response = client.newCall(request).execute()
+            val json = response.body?.string() ?: return@withContext emptyList()
+            if (!response.isSuccessful) return@withContext emptyList()
+
+            val arr = JSONArray(json)
+            val battles = mutableListOf<BattleProposalResponse>()
+            for (i in 0 until arr.length()) {
+                battles.add(parseBattleProposal(arr.getJSONObject(i)))
+            }
+            battles
+        } catch (e: Exception) {
+            Log.e(TAG, "getPlayerBattles failed", e)
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun acceptBattle(battleId: String, playerId: String, cardId: String): BattleResponse =
+        resolveBattle(battleId, playerId, "accept", cardId)
+
+    suspend fun rejectBattle(battleId: String, playerId: String): BattleResponse =
+        resolveBattle(battleId, playerId, "reject", null)
+
+    private suspend fun resolveBattle(
+        battleId: String,
+        playerId: String,
+        action: String,
+        cardId: String?
+    ): BattleResponse = withContext(Dispatchers.IO) {
+        try {
+            val body = JSONObject()
+                .put("playerId", playerId)
+                .apply {
+                    if (cardId != null) put("cardId", cardId)
+                }
+                .toString()
+                .toRequestBody(JSON_MEDIA)
+            val request = Request.Builder()
+                .url("$BASE_URL/battles/$battleId/$action")
+                .put(body)
+                .build()
+            val response = client.newCall(request).execute()
+            val json = response.body?.string() ?: return@withContext BattleResponse(
+                success = false,
+                message = localizedString(R.string.network_error)
+            )
+            val obj = JSONObject(json)
+            BattleResponse(
+                success = obj.optBoolean("success", false),
+                message = obj.optString("message", "")
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "resolveBattle failed", e)
+            e.printStackTrace()
+            BattleResponse(false, localizedString(R.string.network_error_with_detail, e.message.orEmpty()))
+        }
+    }
+
     // --- Parsers ---
 
     private fun parsePlayerResponse(json: JSONObject): PlayerResponse {
@@ -439,6 +536,36 @@ object ApiService {
         )
     }
 
+    private fun parseBattleProposal(obj: JSONObject): BattleProposalResponse {
+        return BattleProposalResponse(
+            id = obj.getString("id"),
+            fromPlayerId = obj.getString("fromPlayerId"),
+            toPlayerId = obj.getString("toPlayerId"),
+            fromCardId = obj.getString("fromCardId"),
+            toCardId = obj.optString("toCardId", "").takeIf { it.isNotBlank() },
+            status = obj.optString("status", "pending"),
+            createdAt = obj.optString("createdAt", ""),
+            resolvedAt = obj.optString("resolvedAt", "").takeIf { it.isNotBlank() },
+            winnerId = obj.optString("winnerId", "").takeIf { it.isNotBlank() },
+            loserId = obj.optString("loserId", "").takeIf { it.isNotBlank() },
+            winnerCardId = obj.optString("winnerCardId", "").takeIf { it.isNotBlank() },
+            loserCardId = obj.optString("loserCardId", "").takeIf { it.isNotBlank() },
+            playerACardName = obj.optString("playerACardName", "").takeIf { it.isNotBlank() },
+            playerBCardName = obj.optString("playerBCardName", "").takeIf { it.isNotBlank() },
+            playerACardPower = obj.optNullableInt("playerACardPower"),
+            playerBCardPower = obj.optNullableInt("playerBCardPower"),
+            winnerCardName = obj.optString("winnerCardName", "").takeIf { it.isNotBlank() },
+            loserCardName = obj.optString("loserCardName", "").takeIf { it.isNotBlank() },
+            winnerCardPower = obj.optNullableInt("winnerCardPower"),
+            loserCardPower = obj.optNullableInt("loserCardPower"),
+            message = obj.optString("message", "").takeIf { it.isNotBlank() }
+        )
+    }
+
+    private fun JSONObject.optNullableInt(name: String): Int? {
+        return if (has(name) && !isNull(name)) optInt(name) else null
+    }
+
     private fun parseStringArray(arr: JSONArray?): List<String> {
         if (arr == null) return emptyList()
         val list = mutableListOf<String>()
@@ -483,6 +610,35 @@ data class TradeProposalResponse(
     val toCardId: String,
     val status: String,
     val createdAt: String
+)
+
+data class BattleResponse(
+    val success: Boolean,
+    val message: String
+)
+
+data class BattleProposalResponse(
+    val id: String,
+    val fromPlayerId: String,
+    val toPlayerId: String,
+    val fromCardId: String,
+    val toCardId: String?,
+    val status: String,
+    val createdAt: String,
+    val resolvedAt: String?,
+    val winnerId: String?,
+    val loserId: String?,
+    val winnerCardId: String?,
+    val loserCardId: String?,
+    val playerACardName: String?,
+    val playerBCardName: String?,
+    val playerACardPower: Int?,
+    val playerBCardPower: Int?,
+    val winnerCardName: String?,
+    val loserCardName: String?,
+    val winnerCardPower: Int?,
+    val loserCardPower: Int?,
+    val message: String?
 )
 
 data class CardHistoryResponse(

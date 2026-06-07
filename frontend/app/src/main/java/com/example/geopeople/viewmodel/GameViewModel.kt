@@ -1,4 +1,4 @@
-package com.example.geopeople.viewmodel
+﻿package com.example.geopeople.viewmodel
 
 import android.app.Application
 import android.content.Context
@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.geopeople.R
 import com.example.geopeople.data.ApiService
+import com.example.geopeople.data.BattleProposalResponse
 import com.example.geopeople.data.CardRepository
 import com.example.geopeople.data.CaptureManager
 import com.example.geopeople.data.LeaderboardPlayerResponse
@@ -68,6 +69,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _trades = MutableStateFlow<List<TradeProposalResponse>>(emptyList())
     val trades: StateFlow<List<TradeProposalResponse>> = _trades.asStateFlow()
 
+    private val _battles = MutableStateFlow<List<BattleProposalResponse>>(emptyList())
+    val battles: StateFlow<List<BattleProposalResponse>> = _battles.asStateFlow()
+
+    private val _battleMessage = MutableStateFlow<String?>(null)
+    val battleMessage: StateFlow<String?> = _battleMessage.asStateFlow()
+
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
@@ -77,6 +84,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var lastSyncLat: Double? = null
     private var lastSyncLon: Double? = null
     private var serverConnectionPopupDismissed = false
+    private val notifiedBattleResultIds = mutableSetOf<String>()
 
     private val prefs = application.getSharedPreferences("geopeople", Context.MODE_PRIVATE)
 
@@ -300,6 +308,25 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun refreshBattles() {
+        val id = playerId ?: return
+        viewModelScope.launch {
+            val updatedBattles = ApiService.getPlayerBattles(id)
+            val newResult = updatedBattles.firstOrNull { battle ->
+                battle.status == "accepted" && battle.id !in notifiedBattleResultIds
+            }
+            _battles.value = updatedBattles
+            if (newResult != null) {
+                notifiedBattleResultIds.add(newResult.id)
+                _battleMessage.value = newResult.message ?: if (newResult.winnerId == id) {
+                    getApplication<Application>().getString(R.string.battle_finished_win)
+                } else {
+                    getApplication<Application>().getString(R.string.battle_finished_loss)
+                }
+            }
+        }
+    }
+
     fun loadTradeTargetInventory(targetPlayerId: String) {
         viewModelScope.launch {
             _tradeTargetInventory.value = ApiService.getPlayerInventoryCards(targetPlayerId)
@@ -312,6 +339,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissTradeMessage() {
         _tradeMessage.value = null
+    }
+
+    fun dismissBattleMessage() {
+        _battleMessage.value = null
     }
 
     fun createTradeProposal(targetPlayerId: String, myCardId: String, targetCardId: String) {
@@ -329,7 +360,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 toCardId = targetCardId
             )
             _tradeMessage.value = result.message.ifBlank {
-                if (result.success) "Proposition envoyee" else "Proposition refusee"
+                if (result.success) getApplication<Application>().getString(R.string.trade_proposal_sent) else getApplication<Application>().getString(R.string.trade_proposal_rejected)
             }
 
             if (result.success) {
@@ -343,7 +374,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val result = ApiService.acceptTrade(tradeId, id)
             _tradeMessage.value = result.message.ifBlank {
-                if (result.success) "Echange accepte" else "Echange refuse"
+                if (result.success) getApplication<Application>().getString(R.string.trade_accepted) else getApplication<Application>().getString(R.string.trade_rejected)
             }
             refreshAfterTradeResolution(id)
         }
@@ -354,7 +385,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val result = ApiService.rejectTrade(tradeId, id)
             _tradeMessage.value = result.message.ifBlank {
-                if (result.success) "Echange refuse" else "Action impossible"
+                if (result.success) getApplication<Application>().getString(R.string.trade_rejected) else getApplication<Application>().getString(R.string.action_impossible)
             }
             refreshTrades()
         }
@@ -369,6 +400,61 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         restoreInventoryFromServer(id)
         refreshLeaderboard()
         refreshTrades()
+    }
+
+    fun createBattleProposal(targetPlayerId: String, myCardId: String) {
+        val id = playerId
+        if (id == null) {
+            _battleMessage.value = getApplication<Application>().getString(R.string.player_not_connected)
+            return
+        }
+
+        viewModelScope.launch {
+            val result = ApiService.createBattleProposal(
+                fromPlayerId = id,
+                toPlayerId = targetPlayerId,
+                fromCardId = myCardId
+            )
+            _battleMessage.value = result.message.ifBlank {
+                if (result.success) getApplication<Application>().getString(R.string.battle_challenge_sent) else getApplication<Application>().getString(R.string.battle_challenge_rejected)
+            }
+            if (result.success) {
+                refreshBattles()
+            }
+        }
+    }
+
+    fun acceptBattle(battleId: String, cardId: String) {
+        val id = playerId ?: return
+        viewModelScope.launch {
+            val result = ApiService.acceptBattle(battleId, id, cardId)
+            _battleMessage.value = result.message.ifBlank {
+                if (result.success) getApplication<Application>().getString(R.string.battle_finished) else getApplication<Application>().getString(R.string.battle_impossible)
+            }
+            refreshAfterBattleResolution(id)
+        }
+    }
+
+    fun rejectBattle(battleId: String) {
+        val id = playerId ?: return
+        viewModelScope.launch {
+            val result = ApiService.rejectBattle(battleId, id)
+            _battleMessage.value = result.message.ifBlank {
+                if (result.success) getApplication<Application>().getString(R.string.battle_challenge_rejected) else getApplication<Application>().getString(R.string.action_impossible)
+            }
+            refreshBattles()
+        }
+    }
+
+    private suspend fun refreshAfterBattleResolution(id: String) {
+        val player = ApiService.getPlayer(id)
+        if (player != null) {
+            _playerScore.value = player.score
+            _playerName.value = player.name
+        }
+        restoreInventoryFromServer(id)
+        refreshLeaderboard()
+        refreshBattles()
     }
 
     fun createNewPlayer(name: String) {
@@ -434,6 +520,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         lastFetchLon = null
         lastSyncLat = null
         lastSyncLon = null
+        notifiedBattleResultIds.clear()
         captureManager.clear()
     }
 
@@ -452,3 +539,4 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
+

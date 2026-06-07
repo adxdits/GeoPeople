@@ -1,4 +1,4 @@
-package com.example.geopeople.ui.navigation
+﻿package com.example.geopeople.ui.navigation
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
@@ -110,6 +110,7 @@ fun AppNavigation(viewModel: GameViewModel) {
                         viewModel.selectCard(null)
                         viewModel.refreshLeaderboard()
                         viewModel.refreshTrades()
+                        viewModel.refreshBattles()
                         selectedTab = MainTab.Profile
                     }
                 )
@@ -188,6 +189,8 @@ private fun MainTabsScreen(
     val tradeTargetInventory by viewModel.tradeTargetInventory.collectAsState()
     val tradeMessage by viewModel.tradeMessage.collectAsState()
     val trades by viewModel.trades.collectAsState()
+    val battles by viewModel.battles.collectAsState()
+    val battleMessage by viewModel.battleMessage.collectAsState()
 
     LaunchedEffect(selectedTab) {
         while (selectedTab == MainTab.Profile) {
@@ -236,6 +239,7 @@ private fun MainTabsScreen(
                 players = leaderboard,
                 targetInventory = tradeTargetInventory,
                 trades = trades,
+                battles = battles,
                 onLoadTargetInventory = { viewModel.loadTradeTargetInventory(it) },
                 onClearTargetInventory = { viewModel.clearTradeTargetInventory() },
                 onCreateTrade = { targetPlayerId, myCardId, targetCardId ->
@@ -244,6 +248,12 @@ private fun MainTabsScreen(
                 onRefreshTrades = { viewModel.refreshTrades() },
                 onAcceptTrade = { viewModel.acceptTrade(it) },
                 onRejectTrade = { viewModel.rejectTrade(it) },
+                onCreateBattle = { targetPlayerId, myCardId ->
+                    viewModel.createBattleProposal(targetPlayerId, myCardId)
+                },
+                onRefreshBattles = { viewModel.refreshBattles() },
+                onAcceptBattle = { battleId, cardId -> viewModel.acceptBattle(battleId, cardId) },
+                onRejectBattle = { viewModel.rejectBattle(it) },
                 onLogout = onLogout
             )
         }
@@ -251,10 +261,23 @@ private fun MainTabsScreen(
         tradeMessage?.let { message ->
             AlertDialog(
                 onDismissRequest = { viewModel.dismissTradeMessage() },
-                title = { Text("Echange") },
+                title = { Text(stringResource(R.string.trade_title)) },
                 text = { Text(message) },
                 confirmButton = {
                     TextButton(onClick = { viewModel.dismissTradeMessage() }) {
+                        Text(stringResource(R.string.action_ok))
+                    }
+                }
+            )
+        }
+
+        battleMessage?.let { message ->
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissBattleMessage() },
+                title = { Text(stringResource(R.string.battle_title)) },
+                text = { Text(message) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissBattleMessage() }) {
                         Text(stringResource(R.string.action_ok))
                     }
                 }
@@ -345,17 +368,28 @@ private fun ProfileScreen(
     players: List<com.example.geopeople.data.LeaderboardPlayerResponse>,
     targetInventory: List<GeoCard>,
     trades: List<com.example.geopeople.data.TradeProposalResponse>,
+    battles: List<com.example.geopeople.data.BattleProposalResponse>,
     onLoadTargetInventory: (String) -> Unit,
     onClearTargetInventory: () -> Unit,
     onCreateTrade: (targetPlayerId: String, myCardId: String, targetCardId: String) -> Unit,
     onRefreshTrades: () -> Unit,
     onAcceptTrade: (String) -> Unit,
     onRejectTrade: (String) -> Unit,
+    onCreateBattle: (targetPlayerId: String, myCardId: String) -> Unit,
+    onRefreshBattles: () -> Unit,
+    onAcceptBattle: (battleId: String, cardId: String) -> Unit,
+    onRejectBattle: (String) -> Unit,
     onLogout: () -> Unit
 ) {
     var showTradeDialog by remember { mutableStateOf(false) }
+    var showBattleDialog by remember { mutableStateOf(false) }
+    var battleToAccept by remember { mutableStateOf<com.example.geopeople.data.BattleProposalResponse?>(null) }
     val tradePlayers = players.filter { it.id != currentPlayerId && it.cardCount > 0 }
     val pendingTrades = trades.filter { it.status == "pending" }
+    val pendingBattles = battles.filter { it.status == "pending" }
+    val resolvedBattles = battles.filter { it.status == "accepted" }
+    val battleWins = resolvedBattles.count { it.winnerId == currentPlayerId }
+    val battleLosses = resolvedBattles.count { it.loserId == currentPlayerId }
     val acceptedTrades = trades.filter { it.status == "accepted" }
     val incomingPendingTrades = pendingTrades.count { it.toPlayerId == currentPlayerId }
     val outgoingPendingTrades = pendingTrades.count { it.fromPlayerId == currentPlayerId }
@@ -397,7 +431,7 @@ private fun ProfileScreen(
                     color = Color(0xFFB7C2CD)
                 )
                 Text(
-                    text = "${inventory.size} carte(s)",
+                    text = stringResource(R.string.profile_card_count, inventory.size),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFFB7C2CD)
                 )
@@ -434,6 +468,23 @@ private fun ProfileScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatBox(
+                        label = stringResource(R.string.profile_stat_battles),
+                        value = resolvedBattles.size.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatBox(
+                        label = stringResource(R.string.profile_stat_wins),
+                        value = battleWins.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatBox(
+                        label = stringResource(R.string.profile_stat_losses),
+                        value = battleLosses.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
                 InfoStatLine(
                     label = stringResource(R.string.profile_stat_best_card),
                     value = strongestCard?.let { "${it.name} (${it.power})" }
@@ -455,7 +506,7 @@ private fun ProfileScreen(
 
             ProfileTile {
                 Text(
-                    text = "Actions",
+                    text = stringResource(R.string.profile_actions),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -471,7 +522,7 @@ private fun ProfileScreen(
                         .height(52.dp),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Proposer un echange", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.profile_propose_trade), fontWeight = FontWeight.Bold)
                 }
                 Button(
                     onClick = onRefreshTrades,
@@ -480,7 +531,26 @@ private fun ProfileScreen(
                         .height(52.dp),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Rafraichir les demandes")
+                    Text(stringResource(R.string.profile_refresh_trade_requests))
+                }
+                Button(
+                    onClick = { showBattleDialog = true },
+                    enabled = inventory.isNotEmpty() && tradePlayers.isNotEmpty(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(stringResource(R.string.profile_challenge_player))
+                }
+                Button(
+                    onClick = onRefreshBattles,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(stringResource(R.string.profile_refresh_battles))
                 }
                 Button(
                     onClick = onLogout,
@@ -502,14 +572,14 @@ private fun ProfileScreen(
 
             ProfileTile {
                 Text(
-                    text = "Demandes d'echange",
+                    text = stringResource(R.string.trade_requests_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 if (pendingTrades.isEmpty()) {
                     Text(
-                        text = "Aucune demande en attente.",
+                        text = stringResource(R.string.trade_requests_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFFB7C2CD)
                     )
@@ -524,6 +594,38 @@ private fun ProfileScreen(
                             onRejectTrade = onRejectTrade
                         )
                     }
+                }
+            }
+
+            ProfileTile {
+                Text(
+                    text = stringResource(R.string.battle_section_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                if (pendingBattles.isEmpty() && resolvedBattles.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.battle_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFB7C2CD)
+                    )
+                }
+                pendingBattles.forEach { battle ->
+                    BattleRequestRow(
+                        battle = battle,
+                        currentPlayerId = currentPlayerId,
+                        players = players,
+                        onAcceptClick = { battleToAccept = battle },
+                        onRejectBattle = onRejectBattle
+                    )
+                }
+                resolvedBattles.takeLast(3).forEach { battle ->
+                    BattleResultRow(
+                        battle = battle,
+                        currentPlayerId = currentPlayerId,
+                        players = players
+                    )
                 }
             }
         }
@@ -543,6 +645,29 @@ private fun ProfileScreen(
                 showTradeDialog = false
                 onClearTargetInventory()
             }
+        )
+    }
+
+    if (showBattleDialog) {
+        BattleDialog(
+            currentInventory = inventory,
+            players = tradePlayers,
+            onCreateBattle = { targetPlayerId, myCardId ->
+                showBattleDialog = false
+                onCreateBattle(targetPlayerId, myCardId)
+            },
+            onDismiss = { showBattleDialog = false }
+        )
+    }
+
+    battleToAccept?.let { battle ->
+        AcceptBattleDialog(
+            inventory = inventory,
+            onAccept = { cardId ->
+                battleToAccept = null
+                onAcceptBattle(battle.id, cardId)
+            },
+            onDismiss = { battleToAccept = null }
         )
     }
 }
@@ -635,10 +760,10 @@ private fun TradeRequestRow(
 ) {
     val incoming = trade.toPlayerId == currentPlayerId
     val otherPlayerId = if (incoming) trade.fromPlayerId else trade.toPlayerId
-    val otherName = players.firstOrNull { it.id == otherPlayerId }?.name ?: "Joueur"
+    val otherName = players.firstOrNull { it.id == otherPlayerId }?.name ?: stringResource(R.string.generic_player)
     val myCardId = if (incoming) trade.toCardId else trade.fromCardId
     val otherCardId = if (incoming) trade.fromCardId else trade.toCardId
-    val myCard = inventory.firstOrNull { it.id == myCardId }?.name ?: "Carte"
+    val myCard = inventory.firstOrNull { it.id == myCardId }?.name ?: stringResource(R.string.generic_card)
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -651,32 +776,233 @@ private fun TradeRequestRow(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = if (incoming) "De $otherName" else "Envoyee a $otherName",
+                text = if (incoming) stringResource(R.string.trade_from_player, otherName) else stringResource(R.string.trade_sent_to_player, otherName),
                 color = Color.White,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Ta carte: $myCard",
+                text = stringResource(R.string.trade_my_card, myCard),
                 color = Color(0xFFB7C2CD),
                 style = MaterialTheme.typography.bodySmall
             )
             Text(
-                text = "Carte proposee: $otherCardId",
+                text = stringResource(R.string.trade_proposed_card, otherCardId),
                 color = Color(0xFFB7C2CD),
                 style = MaterialTheme.typography.bodySmall
             )
             if (incoming) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { onAcceptTrade(trade.id) }, modifier = Modifier.weight(1f)) {
-                        Text("Accepter")
+                        Text(stringResource(R.string.trade_accept))
                     }
                     OutlinedButton(onClick = { onRejectTrade(trade.id) }, modifier = Modifier.weight(1f)) {
-                        Text("Refuser")
+                        Text(stringResource(R.string.trade_reject))
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun BattleRequestRow(
+    battle: com.example.geopeople.data.BattleProposalResponse,
+    currentPlayerId: String?,
+    players: List<com.example.geopeople.data.LeaderboardPlayerResponse>,
+    onAcceptClick: () -> Unit,
+    onRejectBattle: (String) -> Unit
+) {
+    val incoming = battle.toPlayerId == currentPlayerId
+    val otherPlayerId = if (incoming) battle.fromPlayerId else battle.toPlayerId
+    val otherName = players.firstOrNull { it.id == otherPlayerId }?.name ?: stringResource(R.string.generic_player)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF202B38),
+        border = BorderStroke(1.dp, Color(0xFF334253))
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = if (incoming) stringResource(R.string.battle_from_player, otherName) else stringResource(R.string.battle_sent_to_player, otherName),
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (incoming) stringResource(R.string.battle_opponent_hidden_card) else stringResource(R.string.battle_own_hidden_card),
+                color = Color(0xFFB7C2CD),
+                style = MaterialTheme.typography.bodySmall
+            )
+            if (incoming) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onAcceptClick, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.trade_accept))
+                    }
+                    OutlinedButton(onClick = { onRejectBattle(battle.id) }, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.trade_reject))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BattleResultRow(
+    battle: com.example.geopeople.data.BattleProposalResponse,
+    currentPlayerId: String?,
+    players: List<com.example.geopeople.data.LeaderboardPlayerResponse>
+) {
+    val won = battle.winnerId == currentPlayerId
+    val opponentId = if (battle.fromPlayerId == currentPlayerId) battle.toPlayerId else battle.fromPlayerId
+    val opponentName = players.firstOrNull { it.id == opponentId }?.name ?: stringResource(R.string.generic_player)
+    val myCardName = if (battle.fromPlayerId == currentPlayerId) battle.playerACardName else battle.playerBCardName
+    val myCardPower = if (battle.fromPlayerId == currentPlayerId) battle.playerACardPower else battle.playerBCardPower
+    val opponentCardName = if (battle.fromPlayerId == currentPlayerId) battle.playerBCardName else battle.playerACardName
+    val opponentCardPower = if (battle.fromPlayerId == currentPlayerId) battle.playerBCardPower else battle.playerACardPower
+    val winnerCard = battle.winnerCardName?.let { name ->
+        battle.winnerCardPower?.let { power -> "$name ($power)" } ?: name
+    } ?: stringResource(R.string.battle_winning_card)
+    val loserCard = battle.loserCardName?.let { name ->
+        battle.loserCardPower?.let { power -> "$name ($power)" } ?: name
+    } ?: stringResource(R.string.battle_losing_card)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = if (won) Color(0xFF263B2D) else Color(0xFF3A2730),
+        border = BorderStroke(1.dp, Color(0xFF334253))
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = if (won) stringResource(R.string.battle_victory_against, opponentName) else stringResource(R.string.battle_defeat_against, opponentName),
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = battle.message ?: stringResource(R.string.battle_finished),
+                color = Color(0xFFB7C2CD),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(R.string.battle_my_card_power, myCardName ?: stringResource(R.string.generic_card), myCardPower?.toString() ?: "?"),
+                color = Color(0xFFB7C2CD),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(R.string.battle_opponent_card_power, opponentCardName ?: stringResource(R.string.generic_card), opponentCardPower?.toString() ?: "?"),
+                color = Color(0xFFB7C2CD),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(R.string.battle_result_cards, winnerCard, loserCard),
+                color = Color.White,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (won) stringResource(R.string.battle_gain_card) else stringResource(R.string.battle_lose_card),
+                color = Color(0xFFFFCB05),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun BattleDialog(
+    currentInventory: List<GeoCard>,
+    players: List<com.example.geopeople.data.LeaderboardPlayerResponse>,
+    onCreateBattle: (targetPlayerId: String, myCardId: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedPlayerId by remember { mutableStateOf<String?>(null) }
+    var selectedCardId by remember { mutableStateOf<String?>(null) }
+    val canSend = selectedPlayerId != null && selectedCardId != null
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.battle_challenge_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(stringResource(R.string.trade_section_player))
+                players.forEach { player ->
+                    TradeChoiceButton(
+                        text = stringResource(R.string.trade_player_card_count, player.name, player.cardCount),
+                        selected = selectedPlayerId == player.id,
+                        onClick = { selectedPlayerId = player.id }
+                    )
+                }
+                Text(stringResource(R.string.battle_hidden_card))
+                currentInventory.take(6).forEach { card ->
+                    TradeChoiceButton(
+                        text = stringResource(R.string.trade_card_choice, card.name, card.power),
+                        selected = selectedCardId == card.id,
+                        onClick = { selectedCardId = card.id }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = canSend,
+                onClick = { onCreateBattle(selectedPlayerId.orEmpty(), selectedCardId.orEmpty()) }
+            ) {
+                Text(stringResource(R.string.battle_send))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.trade_cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun AcceptBattleDialog(
+    inventory: List<GeoCard>,
+    onAccept: (cardId: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedCardId by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.battle_choose_card_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(stringResource(R.string.battle_choose_card_help))
+                inventory.take(6).forEach { card ->
+                    TradeChoiceButton(
+                        text = stringResource(R.string.trade_card_choice, card.name, card.power),
+                        selected = selectedCardId == card.id,
+                        onClick = { selectedCardId = card.id }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = selectedCardId != null,
+                onClick = { onAccept(selectedCardId.orEmpty()) }
+            ) {
+                Text(stringResource(R.string.battle_fight))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.trade_cancel))
+            }
+        }
+    )
 }
 
 @Composable
@@ -696,10 +1022,10 @@ private fun TradeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Echange 1 carte contre 1 carte") },
+        title = { Text(stringResource(R.string.trade_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Joueur")
+                Text(stringResource(R.string.trade_section_player))
                 players.forEach { player ->
                     Button(
                         onClick = {
@@ -713,28 +1039,28 @@ private fun TradeDialog(
                             contentColor = if (selectedPlayerId == player.id) Color(0xFF17212B) else Color.White
                         )
                     ) {
-                        Text("${player.name} - ${player.cardCount} carte(s)")
+                        Text(stringResource(R.string.trade_player_card_count, player.name, player.cardCount))
                     }
                 }
 
-                Text("Ta carte")
+                Text(stringResource(R.string.trade_section_my_card))
                 currentInventory.take(5).forEach { card ->
                     TradeChoiceButton(
-                        text = "${card.name} (${card.power})",
+                        text = stringResource(R.string.trade_card_choice, card.name, card.power),
                         selected = selectedMyCardId == card.id,
                         onClick = { selectedMyCardId = card.id }
                     )
                 }
 
-                Text(selectedPlayer?.let { "Carte de ${it.name}" } ?: "Carte de l'autre joueur")
+                Text(selectedPlayer?.let { stringResource(R.string.trade_section_player_card, it.name) } ?: stringResource(R.string.trade_section_other_card))
                 if (selectedPlayerId == null) {
-                    Text("Choisis d'abord un joueur.")
+                    Text(stringResource(R.string.trade_select_player_first))
                 } else if (targetInventory.isEmpty()) {
-                    Text("Aucune carte disponible.")
+                    Text(stringResource(R.string.trade_no_card_available))
                 } else {
                     targetInventory.take(5).forEach { card ->
                         TradeChoiceButton(
-                            text = "${card.name} (${card.power})",
+                            text = stringResource(R.string.trade_card_choice, card.name, card.power),
                             selected = selectedTargetCardId == card.id,
                             onClick = { selectedTargetCardId = card.id }
                         )
@@ -753,12 +1079,12 @@ private fun TradeDialog(
                     )
                 }
             ) {
-                Text("Echanger")
+                Text(stringResource(R.string.trade_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annuler")
+                Text(stringResource(R.string.trade_cancel))
             }
         }
     )
@@ -919,3 +1245,4 @@ private fun StartScreen(onStartClick: () -> Unit) {
         }
     }
 }
+
