@@ -12,10 +12,12 @@
     <string name="server_retry_message">%1$s\\n\\nL\\\'application va continuer a essayer de se reconnecter.</string>
     <string name="capture_dialog_title">Capture</string>
     <string name="capture_minigame_lost">Mini-jeu perdu : la carte reste verrouillee.</string>
+    <string name="capture_minigame_lost_with_lock">Mini-jeu perdu : carte verrouillee pendant %1$s. Tentative %2$d.</string>
 
     <string name="capture_gps_waiting">GPS en attente</string>
     <string name="capture_direction_gps">GPS</string>
     <string name="capture_card_already_captured">Carte deja capturee</string>
+    <string name="capture_locked_remaining">Carte verrouillee : %1$s restant</string>
     <string name="capture_possible">Capture possible</string>
     <string name="capture_remaining_meters">Encore %1$d m avant capture</string>
     <string name="capture_position_waiting">Position GPS en attente</string>
@@ -24,6 +26,7 @@
     <string name="capture_direction">Direction: %1$s</string>
     <string name="capture_power">Puissance: %1$d</string>
     <string name="capture_already_captured_button">Deja capturée</string>
+    <string name="capture_locked_button">Verrouillee (%1$s)</string>
     <string name="capture_button">Capturer !</string>
     <string name="capture_too_far">Trop loin (approchez a &lt; 50m)</string>
     <string name="capture_success">Carte capturée !</string>
@@ -162,4 +165,6 @@
     <string name="player_not_connected">Joueur non connecte au backend</string>
     <string name="capture_denied_backend">Capture refusee par le backend</string>
     <string name="create_player_failed">Impossible de creer un nouveau joueur.</string>
+    <string name="duration_seconds">%1$d s</string>
+    <string name="duration_minutes_seconds">%1$d min %2$d s</string>
 </resources>

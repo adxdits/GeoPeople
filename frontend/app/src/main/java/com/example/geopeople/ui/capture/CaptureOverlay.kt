@@ -35,6 +35,7 @@ fun CaptureOverlay(
     directionLabel: String,
     approachMessage: String,
     approachSignal: Int,
+    lockRemainingText: String?,
     canCapture: Boolean,
     alreadyCaptured: Boolean,
     onCapture: () -> Unit,
@@ -52,12 +53,14 @@ fun CaptureOverlay(
     }
     val statusColor = when {
         alreadyCaptured -> Color(0xFF607D8B)
+        lockRemainingText != null -> Color(0xFFC62828)
         canCapture -> Color(0xFF2E7D32)
         distance <= 120.0 -> Color(0xFFF57C00)
         else -> Color(0xFF5267A0)
     }
     val statusText = when {
         alreadyCaptured -> stringResource(R.string.capture_card_already_captured)
+        lockRemainingText != null -> stringResource(R.string.capture_locked_remaining, lockRemainingText)
         canCapture -> stringResource(R.string.capture_possible)
         distance.isFinite() -> stringResource(R.string.capture_remaining_meters, remainingMeters.toInt())
         else -> stringResource(R.string.capture_position_waiting)
@@ -161,6 +164,11 @@ fun CaptureOverlay(
                     alreadyCaptured -> {
                         Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
                             Text(stringResource(R.string.capture_already_captured_button))
+                        }
+                    }
+                    lockRemainingText != null -> {
+                        Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.capture_locked_button, lockRemainingText))
                         }
                     }
                     canCapture -> {

@@ -30,6 +30,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val playerLocation: StateFlow<Location?> = locationService.location
     val allCards: StateFlow<List<GeoCard>> = cardRepository.cards
     val inventory: StateFlow<List<GeoCard>> = captureManager.inventory
+    val captureLocks = captureManager.captureLocks
 
     private val _selectedCard = MutableStateFlow<GeoCard?>(null)
     val selectedCard: StateFlow<GeoCard?> = _selectedCard.asStateFlow()
@@ -249,8 +250,24 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun reportCaptureFailure(message: String) {
-        _captureMessage.value = message
+    fun reportCaptureFailure(card: GeoCard) {
+        val lock = captureManager.registerFailedAttempt(card.id)
+        val remainingSeconds = ((lock.lockedUntilMillis - System.currentTimeMillis()) / 1000L).coerceAtLeast(1L)
+        _captureMessage.value = getApplication<Application>().getString(
+            R.string.capture_minigame_lost_with_lock,
+            formatLockDuration(remainingSeconds),
+            lock.attempts
+        )
+
+        val loc = playerLocation.value ?: return
+        val id = playerId ?: return
+        viewModelScope.launch {
+            ApiService.captureCard(id, card.id, loc.latitude, loc.longitude, miniGameSuccess = false)
+        }
+    }
+
+    fun clearExpiredCaptureLocks() {
+        captureManager.clearExpiredLocks()
     }
 
     fun dismissCaptureMessage() {
@@ -406,5 +423,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         locationService.stopTracking()
+    }
+
+    private fun formatLockDuration(totalSeconds: Long): String {
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return if (minutes > 0) {
+            getApplication<Application>().getString(R.string.duration_minutes_seconds, minutes, seconds)
+        } else {
+            getApplication<Application>().getString(R.string.duration_seconds, seconds)
+        }
     }
 }

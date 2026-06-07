@@ -4,6 +4,47 @@ import { addCardToInventory, getPlayerInventory } from "./playerService";
 import { getCardById } from "./cardsService";
 
 const captures: Capture[] = [];
+const failedCaptureLocks = new Map<string, { attempts: number; lockedUntil: number }>();
+const LOCK_DURATIONS_MS = [
+  30_000,
+  2 * 60_000,
+  5 * 60_000,
+  15 * 60_000,
+  30 * 60_000
+];
+
+function lockKey(playerId: string, cardId: string): string {
+  return `${playerId}:${cardId}`;
+}
+
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.max(1, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes > 0 ? `${minutes}min ${seconds}s` : `${seconds}s`;
+}
+
+function registerFailedAttempt(playerId: string, cardId: string): { attempts: number; remainingMs: number } {
+  const key = lockKey(playerId, cardId);
+  const previousAttempts = failedCaptureLocks.get(key)?.attempts ?? 0;
+  const attempts = previousAttempts + 1;
+  const duration = LOCK_DURATIONS_MS[Math.min(attempts - 1, LOCK_DURATIONS_MS.length - 1)];
+  failedCaptureLocks.set(key, { attempts, lockedUntil: Date.now() + duration });
+  return { attempts, remainingMs: duration };
+}
+
+function getRemainingLockMs(playerId: string, cardId: string): number {
+  const key = lockKey(playerId, cardId);
+  const lock = failedCaptureLocks.get(key);
+  if (!lock) return 0;
+
+  const remainingMs = lock.lockedUntil - Date.now();
+  if (remainingMs <= 0) {
+    failedCaptureLocks.delete(key);
+    return 0;
+  }
+  return remainingMs;
+}
 
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -36,9 +77,21 @@ export function captureCard(
     };
   }
 
+  const remainingLockMs = getRemainingLockMs(playerId, cardId);
+  if (remainingLockMs > 0) {
+    return {
+      success: false,
+      message: `Carte verrouillee encore ${formatDuration(remainingLockMs)}`
+    };
+  }
+
   // mini jeu
   if (!miniGameSuccess) {
-    return { success: false, message: "Mini-jeu non réussi" };
+    const lock = registerFailedAttempt(playerId, cardId);
+    return {
+      success: false,
+      message: `Mini-jeu perdu : carte verrouillee pendant ${formatDuration(lock.remainingMs)}. Tentative ${lock.attempts}.`
+    };
   }
 
   // distance max 50m
@@ -84,6 +137,7 @@ export function captureCard(
 
   // ajout inventaire
   addCardToInventory(playerId, cardId);
+  failedCaptureLocks.delete(lockKey(playerId, cardId));
 
   return {
     success: true,

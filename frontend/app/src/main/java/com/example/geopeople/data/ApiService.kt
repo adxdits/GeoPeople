@@ -16,9 +16,9 @@ import java.util.concurrent.TimeUnit
 
 object ApiService {
     private const val TAG = "GeoPeopleApi"
-    // for real device use 127.0.0.1
-    // For emulator use 10.0.2.2, for real device use your machine's IP
-    private const val BASE_URL = "http://127.0.0.1:3000/api"
+    // Android emulator: 10.0.2.2 points to the host machine running the backend.
+    // For a real phone, replace it with the computer's local network IP address.
+    private const val BASE_URL = "http://10.0.2.2:3000/api"
     private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
 
     private val client = OkHttpClient.Builder()

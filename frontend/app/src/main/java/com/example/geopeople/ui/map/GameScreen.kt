@@ -66,8 +66,10 @@ fun GameScreen(
     val captureMessage by viewModel.captureMessage.collectAsState()
     val serverConnectionMessage by viewModel.serverConnectionMessage.collectAsState()
     val inventory by viewModel.inventory.collectAsState()
+    val captureLocks by viewModel.captureLocks.collectAsState()
     var pendingCaptureCard by remember { mutableStateOf<GeoCard?>(null) }
     var previousDistanceByCard by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
+    var lockTickerMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val miniGameLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -78,7 +80,15 @@ fun GameScreen(
         if (result.resultCode == Activity.RESULT_OK) {
             viewModel.captureAfterMiniGame(card)
         } else {
-            viewModel.reportCaptureFailure(context.getString(R.string.capture_minigame_lost))
+            viewModel.reportCaptureFailure(card)
+        }
+    }
+
+    LaunchedEffect(selectedCard?.id, captureLocks) {
+        while (selectedCard != null) {
+            lockTickerMillis = System.currentTimeMillis()
+            viewModel.clearExpiredCaptureLocks()
+            kotlinx.coroutines.delay(1000L)
         }
     }
 
@@ -142,6 +152,10 @@ fun GameScreen(
             val bearing = playerLocation?.let { loc ->
                 bearingDegrees(loc.latitude, loc.longitude, card.latitude, card.longitude)
             }
+            val lockRemainingMillis = captureLocks[card.id]
+                ?.let { (it.lockedUntilMillis - lockTickerMillis).coerceAtLeast(0L) }
+                ?: 0L
+            val lockRemainingText = lockRemainingMillis.takeIf { it > 0L }?.let(::formatLockRemaining)
 
             LaunchedEffect(card.id, distance) {
                 if (distance.isFinite()) {
@@ -156,7 +170,8 @@ fun GameScreen(
                 directionLabel = bearing?.let(::compassLabel) ?: stringResource(R.string.capture_direction_gps),
                 approachMessage = approachState.message(),
                 approachSignal = approachState.signal,
-                canCapture = distance <= CaptureManager.CAPTURE_RANGE && !capturedIds.contains(card.id),
+                lockRemainingText = lockRemainingText,
+                canCapture = distance <= CaptureManager.CAPTURE_RANGE && !capturedIds.contains(card.id) && lockRemainingMillis == 0L,
                 alreadyCaptured = capturedIds.contains(card.id),
                 onCapture = {
                     pendingCaptureCard = card
@@ -232,6 +247,17 @@ private fun compassLabel(degrees: Double): String {
     val directions = listOf("N", "NE", "E", "SE", "S", "SO", "O", "NO")
     val index = (((degrees + 22.5) % 360.0) / 45.0).toInt()
     return directions[index]
+}
+
+private fun formatLockRemaining(remainingMillis: Long): String {
+    val totalSeconds = ((remainingMillis + 999L) / 1000L).coerceAtLeast(1L)
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return if (minutes > 0) {
+        "${minutes}min ${seconds}s"
+    } else {
+        "${seconds}s"
+    }
 }
 
 @Composable
