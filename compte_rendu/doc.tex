@@ -1,0 +1,353 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{pgf-pie}
+\usetikzlibrary{positioning,arrows.meta,shapes.misc}
+
+\geometry{margin=2.5cm}
+\setstretch{1.12}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!60!black,
+  pdftitle={GeoPeople - Rapport global de développement},
+  pdfauthor={Adam, Anthonin, Ihssan}
+}
+
+\title{\textbf{GeoPeople}\\Rapport global de développement}
+\author{Adam \and Anthonin \and Ihssan}
+\date{Juin 2026}
+
+\begin{document}
+\maketitle
+
+\noindent\textcolor{red!70!black}{\textbf{Avertissement : nos rendus personnels sont dans le dossier \texttt{nos\_rendu\_perso}.}}
+\vspace{0.4em}
+
+\noindent\textcolor{red!85!black}{\textbf{Avertissement visible : le dépôt officiel du projet est \href{https://github.com/adxdits/GeoPeople}{https://github.com/adxdits/GeoPeople}.}}
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+GeoPeople est une application Android de jeu géolocalisé inspirée du principe de \emph{capture en mobilité}. Le joueur se déplace physiquement, détecte des cartes biographiques autour de sa position, réussit un mini-jeu, puis capture la carte pour enrichir son inventaire et améliorer son score.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.92\linewidth]{backgroundStartimage.jpg}
+  \caption{Illustration principale de GeoPeople (image utilisée dans le README).}
+\end{figure}
+
+Le projet repose sur deux blocs techniques :
+\begin{itemize}[leftmargin=1.2cm]
+  \item un frontend Android en Kotlin/Jetpack Compose ;
+  \item un backend Node.js/TypeScript (Express) exposant les règles métier (capture, score, échanges, classement).
+\end{itemize}
+
+Ce document présente l'architecture, les choix techniques, l'organisation d'équipe, les difficultés rencontrées et les solutions apportées.
+
+\section{Objectifs fonctionnels du projet}
+Les objectifs implémentés dans l'état actuel du projet sont les suivants :
+\begin{itemize}[leftmargin=1.2cm]
+  \item suivi GPS du joueur ;
+  \item affichage cartographique (OpenStreetMap via osmdroid) ;
+  \item chargement de cartes proches ;
+  \item tentative de capture conditionnée à la distance et à la réussite d'un mini-jeu ;
+  \item verrouillage temporaire en cas d'échec du mini-jeu ;
+  \item inventaire des cartes capturées ;
+  \item calcul de score avec multiplicateurs par collections ;
+  \item classement global des joueurs ;
+  \item proposition/acceptation/rejet d'échanges de cartes entre joueurs proches ;
+  \item historique de possession des cartes (capture et échange) ;
+  \item consultation de biographies via Wikidata et Wikipedia.
+\end{itemize}
+
+\section{Architecture globale}
+\subsection{Vue d'ensemble}
+L'application suit une architecture client--serveur :
+\begin{itemize}[leftmargin=1.2cm]
+  \item le frontend gère l'expérience de jeu, la géolocalisation, la carte et l'interface ;
+  \item le backend centralise les règles de validation pour garantir une cohérence multi-joueurs.
+\end{itemize}
+
+Le backend expose des routes REST sous \texttt{/api} :
+\begin{itemize}[leftmargin=1.2cm]
+  \item \texttt{/api/cards}
+  \item \texttt{/api/players}
+  \item \texttt{/api/captures}
+  \item \texttt{/api/trades}
+\end{itemize}
+
+\subsection{Composants principaux côté Android}
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{MainActivity} : point d'entrée, gestion de la permission de localisation.
+  \item \textbf{GameViewModel} : orchestration principale (GPS, synchro backend, capture, score, échanges).
+  \item \textbf{LocationService} : récupération des positions via \texttt{FusedLocationProviderClient}.
+  \item \textbf{CardRepository} : stockage des cartes courantes et fallback Wikidata.
+  \item \textbf{ApiService} : client HTTP (OkHttp) vers le backend.
+  \item \textbf{UI Compose} : navigation, carte, inventaire, profil, leaderboard, détails carte.
+\end{itemize}
+
+\subsection{Composants principaux côté backend}
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{cardsService} : liste de cartes, filtrage géographique, génération de cartes de démonstration autour du joueur.
+  \item \textbf{captureService} : validation de capture (distance, mini-jeu, verrouillage progressif).
+  \item \textbf{playerService} : inscription, inventaire, mise à jour de position, anti-triche basique, classement.
+  \item \textbf{scoringService} : calcul du score total et des collections avec multiplicateurs Fibonacci.
+  \item \textbf{tradeService} : cycle de vie des propositions d'échange et contrôle de proximité.
+\end{itemize}
+
+\subsection{Diagramme UML simplifié (coloré)}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  classbox/.style={
+    rectangle,
+    rounded corners=4pt,
+    draw=#1!70!black,
+    fill=#1!18,
+    very thick,
+    minimum width=4.8cm,
+    minimum height=1.9cm,
+    align=left,
+    inner sep=6pt
+  },
+  rel/.style={-Latex, thick, draw=gray!75!black}
+]
+  \node[classbox=blue] (vm) {
+    \textbf{GameViewModel}\\
+    + startTracking()\\
+    + captureAfterMiniGame()\\
+    + createTradeProposal()
+  };
+
+  \node[classbox=teal, below left=1.8cm and 0.7cm of vm] (api) {
+    \textbf{ApiService}\\
+    + getNearbyCards()\\
+    + captureCard()\\
+    + getLeaderboard()
+  };
+
+  \node[classbox=green!60!black, below right=1.8cm and 0.7cm of vm] (repo) {
+    \textbf{CardRepository}\\
+    + loadCardsAround()\\
+    + setCards()\\
+    + getCardsInRange()
+  };
+
+  \node[classbox=orange, right=3.2cm of vm] (backend) {
+    \textbf{Backend (Express)}\\
+    /cards, /players, /captures, /trades\\
+    services: capture, scoring, trade
+  };
+
+  \draw[rel] (vm) -- node[above,sloped]{orchestration} (backend);
+  \draw[rel] (vm) -- node[left]{HTTP} (api);
+  \draw[rel] (vm) -- node[right]{state} (repo);
+  \draw[rel] (api) -- node[below]{REST} (backend);
+\end{tikzpicture}
+\caption{UML simplifié des composants principaux de GeoPeople.}
+\end{figure}
+
+\section{Implémentation des mécanismes de jeu}
+\subsection{Découverte et placement des cartes}
+Le frontend demande périodiquement des cartes proches de la position du joueur. Le backend fournit une liste filtrée par rayon (
+\texttt{/api/cards/nearby?lat=...\&lon=...\&radius=...}).
+
+Particularité utile en démonstration : le backend peut générer dynamiquement des cartes \emph{demo} autour des coordonnées du joueur afin d'assurer une jouabilité locale.
+
+\subsection{Acquisition d'une carte}
+Le flux réel implémenté est :
+\begin{enumerate}[leftmargin=1.2cm]
+  \item le joueur sélectionne une carte visible ;
+  \item un mini-jeu est lancé aléatoirement parmi les mini-jeux disponibles ;
+  \item si réussite, appel backend de capture avec \texttt{miniGameSuccess=true} ;
+  \item le backend vérifie notamment :
+  \begin{itemize}[leftmargin=0.8cm]
+    \item que la carte existe et n'est pas déjà capturée ;
+    \item que le joueur est à moins de 50 m ;
+    \item que la carte n'est pas verrouillée pour ce joueur.
+  \end{itemize}
+  \item en cas d'échec du mini-jeu, verrouillage progressif (30 s, 2 min, 5 min, 15 min, 30 min).
+\end{enumerate}
+
+\subsection{Inventaire, collections et score}
+Le score ne dépend pas seulement de la puissance brute des cartes. Le backend regroupe les cartes en collections selon plusieurs critères implémentés :
+\begin{itemize}[leftmargin=1.2cm]
+  \item initiales du nom de la personnalité ;
+  \item lieu ;
+  \item relation (naissance, décès, etc.) ;
+  \item première lettre du nom.
+\end{itemize}
+
+Pour chaque collection de taille $n\ge 2$, les coefficients appliqués suivent Fibonacci :
+\[
+F_1=1,\quad F_2=1,\quad F_n=F_{n-1}+F_{n-2}.
+\]
+
+Si une carte appartient à plusieurs collections, les coefficients sont additionnés, puis appliqués à sa puissance. Ce choix récompense les inventaires variés et cohérents.
+
+\subsection{Echanges de cartes}
+Un échange n'est possible que si :
+\begin{itemize}[leftmargin=1.2cm]
+  \item les deux joueurs existent ;
+  \item chacun possède la carte proposée ;
+  \item les joueurs sont physiquement proches (seuil backend : 100 m) ;
+  \item la proposition est encore \texttt{pending}.
+\end{itemize}
+
+Le backend gère ensuite l'acceptation/refus et met à jour l'historique de possession des cartes en cas d'échange validé.
+
+\section{Mini-jeux et capteurs}
+Le projet intègre plusieurs mini-jeux, dont au moins un par membre :
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Anthonin} : mini-jeu type Snake contrôlé par l'accéléromètre (inclinaison du téléphone).
+  \item \textbf{Ihssan} : mini-jeu \emph{Ball Run/Treasure} utilisant les données de mouvement (accéléromètre) pour piloter la progression.
+  \item \textbf{Adam} : mini-jeu \emph{Pokeball} combinant accéléromètre et détection micro (clap detector) ; mini-jeu \emph{Memory} intégré comme mode complémentaire.
+\end{itemize}
+
+Dans l'application principale, le mini-jeu de capture est sélectionné aléatoirement parmi les activités disponibles.
+
+\section{Biographies et données externes}
+Deux sources externes sont exploitées :
+\begin{itemize}[leftmargin=1.2cm]
+  \item \textbf{Wikidata} pour les entités, lieux et métadonnées ;
+  \item \textbf{Wikipedia} (API \texttt{/page/summary}) pour le résumé et certaines images.
+\end{itemize}
+
+Le frontend fusionne ces informations dans un modèle \texttt{BiographyDetails}, puis les affiche dans une interface dédiée sans composant WebView HTML.
+
+\section{Qualité logicielle et tests}
+\subsection{Modularité}
+La séparation en services backend, ViewModel Android, repository, et composants UI Compose rend l'application maintenable et extensible.
+
+\subsection{Tests existants}
+Le backend inclut une suite de tests ciblant le service de score (cas sans collection, Fibonacci, cumul de multiplicateurs). Ces tests valident la logique de calcul des points, qui est centrale pour la compétition.
+
+\subsection{Points de robustesse déjà présents}
+\begin{itemize}[leftmargin=1.2cm]
+  \item validation stricte des payloads API ;
+  \item messages d'erreur contextualisés ;
+  \item fallback frontend en cas d'indisponibilité backend ;
+  \item vérifications anti-abus sur capture et échange.
+\end{itemize}
+
+\section{Répartition du travail}
+La répartition consolidée du projet est :
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Membre} & \textbf{Part estimée} & \textbf{Contributions principales} \\
+\midrule
+Adam & 40\% & Intégration générale Android, mini-jeux (Pokeball/Memory), capture flow, raccordements API \\
+Anthonin & 30\% & Mini-jeu Snake (capteurs), logique de jeu, stabilisation UX de capture \\
+Ihssan & 30\% & Mini-jeu Ball Run/Treasure (capteurs), écrans de jeu, support intégration frontend \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \pie[
+      text=inside,
+      font=\small,
+      radius=2.2,
+      color={blue!65,orange!80,green!65!black},
+      after number=\%]
+      {40/Adam,30/Anthonin,30/Ihssan}
+
+    % Legende manuelle avec espacement vertical net
+    \node[draw=none, fill=none, anchor=west] at (3.2, 1.25) {
+      \begin{tabular}{@{}l@{\hspace{0.9em}}l@{}}
+        \textcolor{blue!65}{\rule{0.35cm}{0.35cm}} & Adam \hspace{0.2em}(40\%) \\
+        [0.45em]
+        \textcolor{orange!80}{\rule{0.35cm}{0.35cm}} & Anthonin \hspace{0.2em}(30\%) \\
+        [0.45em]
+        \textcolor{green!65!black}{\rule{0.35cm}{0.35cm}} & Ihssan \hspace{0.2em}(30\%)
+      \end{tabular}
+    };
+  \end{tikzpicture}
+  \caption{Cercle de répartition du travail du projet.}
+\end{figure}
+
+\section{Organisation d'équipe et gestion des conflits}
+\subsection{Organisation mise en place}
+Nous avons structuré le travail avec une logique simple :
+\begin{itemize}[leftmargin=1.2cm]
+  \item lots par domaine (backend, UI/navigation, mini-jeux) ;
+  \item points de synchronisation hebdomadaires ;
+  \item revues croisées avant fusion dans la branche principale ;
+  \item arbitrage technique sur la base de prototypes rapides.
+\end{itemize}
+
+\subsection{Exemples de conflits techniques rencontrés et résolus}
+\begin{enumerate}[leftmargin=1.2cm]
+  \item \textbf{Conflit de priorités (jouabilité vs. rigueur métier)} :
+  une partie de l'équipe souhaitait une capture très permissive pour fluidifier les tests, l'autre insistait sur des contraintes strictes (distance, verrouillage, unicité).\newline
+  \textbf{Résolution} : règles strictes conservées côté backend, avec données de démonstration proches du joueur pour garder une bonne jouabilité.
+
+  \item \textbf{Conflit d'intégration des mini-jeux} :
+  des écarts de structure (naming package/activité) ont ralenti le branchement dans l'appli principale.\newline
+  \textbf{Résolution} : définition d'un contrat d'intégration unique (résultat \texttt{Activity.RESULT\_OK} pour succès), puis ajout d'un lanceur commun dans l'écran de capture.
+
+  \item \textbf{Conflit de stratégie score} :
+  débat entre score linéaire simple et système de collections plus riche.\newline
+  \textbf{Résolution} : adoption des multiplicateurs Fibonacci avec tests unitaires pour fiabiliser la formule.
+\end{enumerate}
+
+\subsection{Gestion des risques projet}
+Nous avons adopté une approche pragmatique :
+\begin{itemize}[leftmargin=1.2cm]
+  \item risque backend indisponible : message utilisateur + fallback local ;
+  \item risque régressions score : tests automatisés ;
+  \item risque incohérences multi-joueurs : validations serveur systématiques ;
+  \item risque dérive planning : gel fonctionnel progressif en fin de sprint.
+\end{itemize}
+
+\section{Limites actuelles et pistes d'amélioration}
+\begin{itemize}[leftmargin=1.2cm]
+  \item persistance backend actuellement en mémoire (pas de base de données durable) ;
+  \item anti-triche encore minimal (améliorable avec règles serveur temporelles enrichies) ;
+  \item couverture de tests à élargir (captures, échanges, routes API) ;
+  \item amélioration possible du mode \emph{découvrable} et des interactions joueurs temps réel.
+\end{itemize}
+
+\section{Conclusion}
+GeoPeople constitue une base fonctionnelle solide d'application géolocalisée multi-mécanismes : carte, capture conditionnée à mini-jeu, inventaire, score avancé et échanges. Le projet démontre une architecture claire, des règles métier cohérentes et une bonne répartition du travail.
+
+Les prochaines itérations visent surtout la persistance durable, le renforcement anti-triche, et l'approfondissement de l'expérience multijoueur temps réel.
+
+\appendix
+\section{Annexe A -- Endpoints principaux}
+\begin{longtable}{p{0.26\linewidth} p{0.68\linewidth}}
+\toprule
+\textbf{Route} & \textbf{Description} \\
+\midrule
+\texttt{GET /api/health} & Etat du backend \\
+\texttt{GET /api/cards/nearby} & Cartes proches d'une position \\
+\texttt{GET /api/cards/:id/history} & Historique de possession d'une carte \\
+\texttt{POST /api/players/register} & Inscription/récupération d'un joueur \\
+\texttt{PUT /api/players/:id/location} & Mise à jour position joueur \\
+\texttt{GET /api/players/leaderboard} & Classement global \\
+\texttt{GET /api/players/:id/inventory/cards} & Inventaire détaillé d'un joueur \\
+\texttt{POST /api/captures} & Tentative de capture (succès/échec mini-jeu) \\
+\texttt{POST /api/trades} & Création proposition d'échange \\
+\texttt{PUT /api/trades/:id/accept} & Acceptation d'échange \\
+\texttt{PUT /api/trades/:id/reject} & Refus d'échange \\
+\bottomrule
+\end{longtable}
+
+\end{document}
