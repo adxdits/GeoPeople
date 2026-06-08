@@ -12,6 +12,7 @@
   <img src="readmeAssets/play.gif" alt="GeoPeople gameplay preview" width="720" />
 </p>
 
+
 ## Overview
 
 GeoPeople is a mobile game built with Kotlin and Jetpack Compose on Android, backed by a TypeScript and Express API.
@@ -140,3 +141,7 @@ The backend test suite currently covers the scoring service.
 - The app requires location permission to unlock the main gameplay loop.
 - The backend must be running for player registration, captures, inventory restore, and leaderboard updates.
 - If cards returned by the backend are not playable nearby, the app falls back to locally loaded data from the Android side.
+
+## License
+
+This project is distributed under the MIT License. See [LICENSE](LICENSE) for details.
